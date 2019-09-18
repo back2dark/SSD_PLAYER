@@ -704,15 +704,31 @@ MI_S32 SSTAR_DestroyVdecChannel(MI_S32 s32VdecChn)
 MI_S32 SSTAR_CreateVdec2DispPipe(MI_S32 s32VdecChn, MI_S32 s32DivpChn, MI_U32 u32VdecW, MI_U32 u32VdecH, MI_S32 s32CodecType)
 {
     ST_Rect_T stCrop= {0, 0, 0, 0};
+    MI_DISP_InputPortAttr_t stInputPortAttr;
     SSTAR_CreateVdecChannel(s32VdecChn, s32CodecType, u32VdecW, u32VdecH, VIDEO_DISP_W, VIDEO_DISP_H);
-    MI_DISP_EnableInputPort(0, 0);
+
+    MI_DISP_GetInputPortAttr(0, 0, &stInputPortAttr);
+	stInputPortAttr.stDispWin.u16X      = 0;
+	stInputPortAttr.stDispWin.u16Y      = 0;
+	stInputPortAttr.stDispWin.u16Width  = VIDEO_DISP_W;
+	stInputPortAttr.stDispWin.u16Height = VIDEO_DISP_H;
+	stInputPortAttr.u16SrcWidth = VIDEO_DISP_W;
+	stInputPortAttr.u16SrcHeight = VIDEO_DISP_H;
+
+	printf("disp input: w=%d, h=%d\n", stInputPortAttr.u16SrcWidth, stInputPortAttr.u16SrcHeight);
+	MI_DISP_DisableInputPort(0, 0);
+	MI_DISP_SetInputPortAttr(0, 0, &stInputPortAttr);
+	MI_DISP_GetInputPortAttr(0, 0, &stInputPortAttr);
+	MI_DISP_EnableInputPort(0, 0);
+	MI_DISP_SetInputPortSyncMode(0, 0, E_MI_DISP_SYNC_MODE_FREE_RUN);
+
     SSTAR_ModuleBind(E_MI_MODULE_ID_VDEC, 0, s32VdecChn, 0,
                     E_MI_MODULE_ID_DISP, 0, 0, 0); //DIVP->DISP
 
     return MI_SUCCESS;
 }
 
-MI_S32 SSTAR_DestroyVdec2DispPipe(     MI_S32 s32VdecChn, MI_S32 s32DivpChn)
+MI_S32 SSTAR_DestroyVdec2DispPipe(MI_S32 s32VdecChn, MI_S32 s32DivpChn)
 {
     SSTAR_ModuleUnBind(E_MI_MODULE_ID_VDEC, 0, s32VdecChn, 0,
                     E_MI_MODULE_ID_DISP, 0, 0, 0); //DIVP->DISP

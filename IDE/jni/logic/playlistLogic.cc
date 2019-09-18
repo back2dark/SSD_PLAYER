@@ -282,10 +282,58 @@ int CreateFileTree(FileTree_t *root)
     return 0;
 }
 
+// sort by asc code by file type and then by name in ascending order
 void SortFileTree(FileTree_t *root)
 {
+	FileTree_t *pos = NULL;
+	FileTree_t *posN = NULL;
+	int i = 0;
 
+	if (!root)
+	{
+		printf("FileTree is not exist\n");
+		return;
+	}
 
+	printf("name:%-50sdirFlag:%-5dsize:%-8ld KB time:%-32sdepth:%-5dchildCnt:%-5d\n", root->name, root->dirFlag, (root->size+1023)/1024,
+			root->time, root->depth, root->childCnt);
+
+	if (list_empty(&root->headNodeList))
+	{
+		return;
+	}
+
+	// do resort
+	for (i = 0; i < root->childCnt; i++)
+	{
+		list_for_each_entry_safe(pos, posN, &root->headNodeList, childNodeList)
+		{
+			if (pos->childNodeList.prev != &root->headNodeList)
+			{
+				// compare with the prev
+				FileTree_t *front = list_entry(pos->childNodeList.prev, FileTree_t, childNodeList);
+
+				if ((front->dirFlag && pos->dirFlag) || (!front->dirFlag && pos->dirFlag))
+				{
+					if (strcmp(pos->name, front->name) < 0)
+					{
+						list_del(&pos->childNodeList);
+						list_add_tail(&pos->childNodeList, &front->childNodeList);
+					}
+				}
+				else if (!front->dirFlag && pos->dirFlag)
+				{
+					list_del(&pos->childNodeList);
+					list_add_tail(&pos->childNodeList, &front->childNodeList);
+				}
+			}
+		}
+	}
+
+	list_for_each_entry(pos, &root->headNodeList, childNodeList)
+	{
+		SortFileTree(pos);
+	}
 }
 
 void BrowseFileTree(FileTree_t *root)
@@ -468,6 +516,10 @@ static void onUI_intent(const Intent *intentPtr) {
 		return -1;
 
 	CreateFileTree(g_pFileRoot);
+
+	// sort file tree
+//	SortFileTree(g_pFileRoot);
+
 	g_pCurFileNode = g_pFileRoot;
 	memset(g_selectPath, 0, sizeof(g_selectPath));
 	//strcpy(g_selectPath, g_udiskPath);

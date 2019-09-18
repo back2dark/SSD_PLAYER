@@ -134,7 +134,6 @@ typedef struct {
 }   frame_queue_t;
 
 typedef struct {
-	MI_S32 (*fpResetDivpInputSize)(MI_S32 s32Width, MI_S32 s32Height);
     MI_S32 (*fpGetMediaInfo)();
     MI_S32 (*fpGetCurrentPlayPos)(MI_S32 s32Duration, MI_S32 s32CurrentPos);
     MI_S32 (*fpDisplayVideo)(MI_S32 s32Width, MI_S32 s32Height, void *pYData, void *pUVData);
