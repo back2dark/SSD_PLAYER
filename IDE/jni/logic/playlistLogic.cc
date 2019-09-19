@@ -256,8 +256,6 @@ int CreateFileTree(FileTree_t *root)
         root->childCnt++;
         list_add_tail(&child->childNodeList, &root->headNodeList);
 
-        // sort list
-
         if (dirFlag)
         {
             child->dirFlag = 1;
@@ -295,8 +293,8 @@ void SortFileTree(FileTree_t *root)
 		return;
 	}
 
-	printf("name:%-50sdirFlag:%-5dsize:%-8ld KB time:%-32sdepth:%-5dchildCnt:%-5d\n", root->name, root->dirFlag, (root->size+1023)/1024,
-			root->time, root->depth, root->childCnt);
+//	printf("name:%-50sdirFlag:%-5dsize:%-8ld KB time:%-32sdepth:%-5dchildCnt:%-5d\n", root->name, root->dirFlag, (root->size+1023)/1024,
+//			root->time, root->depth, root->childCnt);
 
 	if (list_empty(&root->headNodeList))
 	{
@@ -313,7 +311,7 @@ void SortFileTree(FileTree_t *root)
 				// compare with the prev
 				FileTree_t *front = list_entry(pos->childNodeList.prev, FileTree_t, childNodeList);
 
-				if ((front->dirFlag && pos->dirFlag) || (!front->dirFlag && pos->dirFlag))
+				if ((front->dirFlag && pos->dirFlag) || (!front->dirFlag && !pos->dirFlag))
 				{
 					if (strcmp(pos->name, front->name) < 0)
 					{
@@ -518,7 +516,7 @@ static void onUI_intent(const Intent *intentPtr) {
 	CreateFileTree(g_pFileRoot);
 
 	// sort file tree
-//	SortFileTree(g_pFileRoot);
+	SortFileTree(g_pFileRoot);
 
 	g_pCurFileNode = g_pFileRoot;
 	memset(g_selectPath, 0, sizeof(g_selectPath));
