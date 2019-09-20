@@ -4,6 +4,8 @@
 #include "playerActivity.h"
 
 /*TAG:GlobalVariable全局变量*/
+static ZKButton* mButton1Ptr;
+static ZKWindow* mWindow1Ptr;
 static ZKVideoView* mVideoview_videoPtr;
 static ZKSeekBar* mSeekbar_volumnPtr;
 static ZKTextView* mTextview_slashPtr;
@@ -17,7 +19,6 @@ static ZKButton* mButton_slowPtr;
 static ZKButton* mButton_stopPtr;
 static ZKButton* mButton_playPtr;
 static ZKSeekBar* mSeekbar_progressPtr;
-static ZKTextView* mTextview_playBarPtr;
 static playerActivity* mActivityPtr;
 
 /*register activity*/
@@ -55,6 +56,7 @@ typedef struct {
 
 /*TAG:ButtonCallbackTab按键映射表*/
 static S_ButtonCallback sButtonCallbackTab[] = {
+    ID_PLAYER_Button1, onButtonClick_Button1,
     ID_PLAYER_Button_voice, onButtonClick_Button_voice,
     ID_PLAYER_Button_fast, onButtonClick_Button_fast,
     ID_PLAYER_Button_slow, onButtonClick_Button_slow,
@@ -143,6 +145,8 @@ const char* playerActivity::getAppName() const{
 //TAG:onCreate
 void playerActivity::onCreate() {
 	Activity::onCreate();
+    mButton1Ptr = (ZKButton*)findControlByID(ID_PLAYER_Button1);
+    mWindow1Ptr = (ZKWindow*)findControlByID(ID_PLAYER_Window1);
     mVideoview_videoPtr = (ZKVideoView*)findControlByID(ID_PLAYER_Videoview_video);if(mVideoview_videoPtr!= NULL){mVideoview_videoPtr->setVideoPlayerMessageListener(this);}
     mSeekbar_volumnPtr = (ZKSeekBar*)findControlByID(ID_PLAYER_Seekbar_volumn);if(mSeekbar_volumnPtr!= NULL){mSeekbar_volumnPtr->setSeekBarChangeListener(this);}
     mTextview_slashPtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_slash);
@@ -156,7 +160,6 @@ void playerActivity::onCreate() {
     mButton_stopPtr = (ZKButton*)findControlByID(ID_PLAYER_Button_stop);
     mButton_playPtr = (ZKButton*)findControlByID(ID_PLAYER_Button_play);
     mSeekbar_progressPtr = (ZKSeekBar*)findControlByID(ID_PLAYER_Seekbar_progress);if(mSeekbar_progressPtr!= NULL){mSeekbar_progressPtr->setSeekBarChangeListener(this);}
-    mTextview_playBarPtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_playBar);
 	mActivityPtr = this;
 	onUI_init();
     registerProtocolDataUpdateListener(onProtocolDataUpdate); 
