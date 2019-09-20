@@ -571,6 +571,7 @@ static void sdl_audio_callback(void *opaque, uint8_t *stream, int len)
 int open_audio(player_stat_t *is)
 {	
     open_audio_stream(is);
+	sleep(1);
     open_audio_playing(is);
 
     return 0;

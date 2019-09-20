@@ -21,6 +21,8 @@ extern "C" {               // 告诉编译器下列代码要以C链接约定的�
 #define YUYV_GREEN              MAKE_YUYV_VALUE(149,43,21)
 #define YUYV_BLUE               MAKE_YUYV_VALUE(29,225,107)
 
+#define SOFT_DECODING   0
+#define HARD_DECODING   1
 
 int open_video(player_stat_t *is);
 

@@ -189,16 +189,26 @@ static void audio_decoder_abort(player_stat_t *is)
 {
     packet_queue_abort(&is->audio_pkt_queue);
     frame_queue_signal(&is->audio_frm_queue);
+
+	pthread_join(is->audioDecode_tid, NULL);
+	pthread_join(is->audioPlay_tid, NULL);
+	
     packet_queue_flush(&is->audio_pkt_queue);
-    //avcodec_free_context(&is->p_acodec_ctx);
+	printf("audio packet flush done!\n");
+    avcodec_free_context(&is->p_acodec_ctx);
 }
 
 static void video_decoder_abort(player_stat_t *is)
 {
     packet_queue_abort(&is->video_pkt_queue);
     frame_queue_signal(&is->video_frm_queue);
+	
+	pthread_join(is->videoDecode_tid, NULL);
+	pthread_join(is->videoPlay_tid, NULL);
+	
     packet_queue_flush(&is->video_pkt_queue);
-    //avcodec_free_context(&is->p_vcodec_ctx);
+	printf("video packet flush done!\n");
+    avcodec_free_context(&is->p_vcodec_ctx);
 }
 
 static void stream_component_close(player_stat_t *is, int stream_index)
@@ -261,13 +271,7 @@ int player_deinit(player_stat_t *is)
         stream_component_close(is, is->video_idx);
         printf("video stream_component_close finish\n");
     }
-    pthread_join(is->audioDecode_tid, NULL);
-    pthread_join(is->videoDecode_tid, NULL);
-    pthread_join(is->audioPlay_tid, NULL);
-    pthread_join(is->videoPlay_tid, NULL);
-    printf("pthread_join finish 11\n");
-    avcodec_free_context(&is->p_vcodec_ctx);
-    avcodec_free_context(&is->p_acodec_ctx);
+   
     av_frame_free(&is->p_frm_yuv);
     
     avformat_close_input(&is->p_fmt_ctx);

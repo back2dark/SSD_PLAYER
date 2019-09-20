@@ -208,6 +208,8 @@ typedef struct {
     pthread_t videoDecode_tid;  //video解码线程
     pthread_t videoPlay_tid;    //video播放线程
 
+	int decode_type;
+
     player_control_t playerController;
 }   player_stat_t;
 

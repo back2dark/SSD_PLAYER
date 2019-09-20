@@ -267,23 +267,26 @@ static void video_display(player_stat_t *is)
     // stride/pitch: 一行图像所占的字节数，Stride=BytesPerPixel*Width+Padding，注意对齐
     // AVFrame.*data[]: 每个数组元素指向对应plane
     // AVFrame.linesize[]: 每个数组元素表示对应plane中一行图像所占的字节数
-    sws_scale(is->img_convert_ctx,                    // sws context
-              (const uint8_t *const *)vp->frame->data,// src slice
-              vp->frame->linesize,                    // src stride
-              0,                                      // src slice y
-              is->p_vcodec_ctx->height,               // src slice height
-              is->p_frm_yuv->data,                    // dst planes
-              is->p_frm_yuv->linesize                 // dst strides
-             );
+    if (is->decode_type == SOFT_DECODING) {
+	    sws_scale(is->img_convert_ctx,                    // sws context
+                  (const uint8_t *const *)vp->frame->data,// src slice
+                  vp->frame->linesize,                    // src stride
+                  0,                                      // src slice y
+                  is->p_vcodec_ctx->height,               // src slice height
+                  is->p_frm_yuv->data,                    // dst planes
+                  is->p_frm_yuv->linesize                 // dst strides
+                  );
 	
-	int ysize;
-    ysize = is->p_vcodec_ctx->width * is->p_vcodec_ctx->height;
-//    printf("displayvideo callback, w=%d, h=%d\n", is->p_vcodec_ctx->width, is->p_vcodec_ctx->height);
-    is->playerController.fpDisplayVideo(is->p_vcodec_ctx->width, is->p_vcodec_ctx->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
+        //printf("displayvideo callback, w=%d, h=%d\n", is->p_vcodec_ctx->width, is->p_vcodec_ctx->height);
+        //is->playerController.fpDisplayVideo(is->p_vcodec_ctx->width, is->p_vcodec_ctx->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
+    	is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
+    }
+	else if (is->decode_type == HARD_DECODING)
+		is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, vp->frame->data[0], vp->frame->data[1]);
 }
 
 /* called to display each frame */
-static void video_refresh(void *opaque, double *remaining_time)
+static int video_refresh(void *opaque, double *remaining_time)
 {
 
     player_stat_t *is = (player_stat_t *)opaque;
@@ -303,7 +306,7 @@ retry:
 			//printf("video file has been played completely! packet num : %d.\n", is->video_pkt_queue.nb_packets);
 			is->playerController.fpPlayComplete();
 		}
-        return;
+        return 0;
     }
 
     double last_duration, duration, delay;
@@ -332,7 +335,7 @@ retry:
         *remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
         // 播放时刻未到，则不播放，直接返回
         //printf("not ready play\n");
-        return;
+        return 0;
     }
 
     // 更新frame_timer值
@@ -365,7 +368,8 @@ retry:
         }
     }
     // 删除当前读指针元素，读指针+1。若未丢帧，读指针从lastvp更新到vp；若有丢帧，读指针从vp更新到nextvp
-    frame_queue_next(&is->video_frm_queue);
+    // 在此处删除该帧会造成画面撕裂
+	//frame_queue_next(&is->video_frm_queue);
     
     if (is->step && !is->paused)
     {
@@ -374,6 +378,10 @@ retry:
 
 display:
     video_display(is);                      // 取出当前帧vp(若有丢帧是nextvp)进行播放
+    if (!is->paused)
+	    frame_queue_next(&is->video_frm_queue);
+
+    return 0;
 }
 
 static void* video_playing_thread(void *arg)
@@ -486,7 +494,24 @@ static int open_video_stream(player_stat_t *is)
     p_codec_par = p_stream->codecpar;
 
     // 1.2 获取解码器
-    p_codec = avcodec_find_decoder(p_codec_par->codec_id);
+    // 对于h264/h265编码的视频选择硬解,其他编码格式使用ffmpeg软解
+    switch (p_codec_par->codec_id) 
+    {
+        case AV_CODEC_ID_H264 :
+			p_codec = avcodec_find_decoder_by_name("ssh264"); 
+			is->decode_type = HARD_DECODING;
+			break;
+
+        case AV_CODEC_ID_HEVC :
+			p_codec = avcodec_find_decoder_by_name("sshevc"); 
+			is->decode_type = HARD_DECODING;
+			break;
+
+		default :
+			p_codec = avcodec_find_decoder(p_codec_par->codec_id);
+			is->decode_type = SOFT_DECODING;
+			break;
+    }  
     if (p_codec == NULL)
     {
         printf("Cann't find codec!\n");
