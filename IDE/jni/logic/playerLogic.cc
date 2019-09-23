@@ -137,6 +137,11 @@ static bool g_bPlayInList = false;
 static std::string fileName;
 static player_stat_t *g_pstPlayStat = NULL;
 
+static int64_t g_site = 0;
+static int64_t g_offset = 0;
+static int g_press = 0;
+static int g_unpress = 0;
+
 void SetPlayingStatus(bool bPlaying)
 {
 	mButton_playPtr->setSelected(bPlaying);
@@ -581,6 +586,8 @@ static void SetPlayerControlCallBack(player_stat_t *is)
 static S_ACTIVITY_TIMEER REGISTER_ACTIVITY_TIMER_TAB[] = {
 	//{0,  6000}, //定时器id=0, 时间间隔6秒
 	//{1,  1000},
+	  {0,  500},
+	  {1,  1000},
 };
 
 /**
@@ -592,8 +599,8 @@ static void onUI_init(){
 
 	// init play view real size
 	LayoutPosition layoutPos = mVideoview_videoPtr->getPosition();
-	g_playViewWidth = layoutPos.mWidth * PANEL_MAX_WIDTH / UI_MAX_WIDTH;
-	g_playViewHeight = ALIGN_DOWN(layoutPos.mHeight * PANEL_MAX_HEIGHT / UI_MAX_HEIGHT, 2);
+	g_playViewWidth = 1024;//layoutPos.mWidth * PANEL_MAX_WIDTH / UI_MAX_WIDTH;
+	g_playViewHeight = 600;//ALIGN_DOWN(layoutPos.mHeight * PANEL_MAX_HEIGHT / UI_MAX_HEIGHT, 2);
 	printf("play view size: w=%d, h=%d\n", g_playViewWidth, g_playViewHeight);
 
 	// divp use window max width & height default, when play file, the inputAttr of divp will be set refer to file size.
@@ -615,6 +622,7 @@ static void onUI_intent(const Intent *intentPtr) {
     	StartPlayVideo();
     	StartPlayAudio();
 
+    	//g_pstPlayStat = player_init("/mnt/nfs/720p_30p.mpg");
     	g_pstPlayStat = player_init(fileName.c_str());
 		if (!g_pstPlayStat)
 		{
@@ -624,7 +632,8 @@ static void onUI_intent(const Intent *intentPtr) {
 			return;
 		}
 
-		printf("video file name is : %s\n", g_pstPlayStat->filename);
+		printf("test video file name is : %s\n", g_pstPlayStat->filename);
+		printf("here\n");
 
 		// sendmessage to play file
 		g_bPlaying = TRUE;
@@ -659,9 +668,17 @@ static void onUI_intent(const Intent *intentPtr) {
 
 			sprintf(totalTime, "%02d:%02d:%02d", (second/3600), ((second%3600) / 60), (second % 60));
 		}
+		int sec,min,hour;
+		sec = g_pstPlayStat->p_fmt_ctx->duration / AV_TIME_BASE;
+		min = sec / 60;
+		hour = min / 60;
+		char time_info[50];
+		sprintf(time_info,"%02d:%02d:%02d",(hour % 24),(min % 60),(sec % 60));
+		printf("all %s\n",time_info);
 
-		mTextview_curtimePtr->setText(curTime);
+		//mTextview_curtimePtr->setText(curTime);
 		mTextview_durationPtr->setText(totalTime);
+
 
 //#endif
     }
@@ -709,7 +726,32 @@ static void onProtocolDataUpdate(const SProtocolData &data) {
  */
 static bool onUI_Timer(int id){
 	switch (id) {
+	case 0:
+		int sec1,min1,hour1;
+		sec1 = g_pstPlayStat->video_clk.pts;
+		min1 = sec1 / 60;
+		hour1 = min1 / 60;
+		char time_play[50];
+		sprintf(time_play,"%02d:%02d:%02d",(hour1 % 24),(min1 % 60),(sec1 %60));
+		//printf("%d,%d,%d",hour1,min1,sec1);
+		mTextview_curtimePtr->setText(time_play);
+		//mTextview_curtimePtr->setText(time_play);
+		break;
+	case 1:
+		printf("time 1\n");
+		int process;
+		int whole_time = g_pstPlayStat->p_fmt_ctx->duration / AV_TIME_BASE;
+		int sec = g_pstPlayStat->video_clk.pts;
+		process = sec * 100 / whole_time;
+		if(process > 100)
+			process = 100;
+		process = sec * 100 / whole_time;
+		if(process > 100)
+			process = 100;
+		printf("progress %d\n",process);
+		mSeekbar_progressPtr->setProgress(process);
 
+		break;
 		default:
 			break;
 	}
@@ -741,7 +783,34 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 }
 static void onProgressChanged_Seekbar_progress(ZKSeekBar *pSeekBar, int progress) {
     //LOGD(" ProgressChanged Seekbar_progress %d !!!\n", progress);
+	if(pSeekBar->isPressed())
+		g_press = 1;
 
+	if(!pSeekBar->isPressed())
+		g_unpress = 1;
+	//printf("press %d\nun %d\n",g_press,g_unpress);
+	int64_t site, offset;
+	double s_time;
+	site = progress * g_pstPlayStat->p_fmt_ctx->duration / 100 ;
+	if (g_pstPlayStat->video_idx >= 0)
+	{
+		s_time = g_pstPlayStat->video_clk.pts;
+	}
+	else if (g_pstPlayStat->audio_idx >= 0)
+		s_time = g_pstPlayStat->audio_clk.pts;
+	if (site >= 0 && site <= g_pstPlayStat->p_fmt_ctx->duration)
+	{
+		site += g_pstPlayStat->p_fmt_ctx->start_time;
+		offset = site - s_time * AV_TIME_BASE;
+		//printf("off %lld\n",site,offset);
+		if (offset > 3000000 || offset < -3000000)
+		{
+			//g_pstPlayStat->seek_flags = AVSEEK_FLAG_FRAME;
+			//stream_seek(g_pstPlayStat, site, offset, 0);
+			g_site = site;
+			g_offset = offset;
+		}
+	}
 	// do seek stuff
 }
 
@@ -812,6 +881,19 @@ static bool onButtonClick_Button_stop(ZKButton *pButton) {
 
 static bool onButtonClick_Button_slow(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_slow !!!\n");
+
+	double incr, pos, pos2;
+	incr = -5.0;
+	pos = get_master_clock(g_pstPlayStat);
+	if (isnan(pos))
+		pos = (double)g_pstPlayStat->seek_pos / AV_TIME_BASE;
+	pos += incr;
+	if (g_pstPlayStat->p_fmt_ctx->start_time != AV_NOPTS_VALUE && pos < g_pstPlayStat->p_fmt_ctx->start_time / (double)AV_TIME_BASE)
+		pos = g_pstPlayStat->p_fmt_ctx->start_time / (double)AV_TIME_BASE;
+	g_pstPlayStat->seek_flags = AVSEEK_FLAG_FRAME;
+	stream_seek(g_pstPlayStat, (int64_t)(pos * AV_TIME_BASE), (int64_t)(incr * AV_TIME_BASE), 0);
+
+#if 0
 	char speedMode[16] = {0};
 
 	if (g_bPlaying)
@@ -884,12 +966,28 @@ static bool onButtonClick_Button_slow(ZKButton *pButton) {
 
 		// sendmessage to adjust speed
 	}
-
+#endif
     return false;
 }
 
 static bool onButtonClick_Button_fast(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_fast !!!\n");
+	double incr, pos, pos2;
+	incr = 8.0;
+	pos = get_master_clock(g_pstPlayStat);
+	if (isnan(pos))
+		pos = (double)g_pstPlayStat->seek_pos / AV_TIME_BASE;
+	printf("now %f\n",pos);
+	pos += incr;
+	if (g_pstPlayStat->p_fmt_ctx->start_time != AV_NOPTS_VALUE && pos > g_pstPlayStat->p_fmt_ctx->duration / (double)AV_TIME_BASE)
+		pos = g_pstPlayStat->p_fmt_ctx->duration / (double)AV_TIME_BASE;
+	g_pstPlayStat->seek_flags = AVSEEK_FLAG_FRAME;
+	stream_seek(g_pstPlayStat, (int64_t)(pos * AV_TIME_BASE), (int64_t)(incr * AV_TIME_BASE), 0);
+	pos2 = get_master_clock(g_pstPlayStat);
+	if (isnan(pos2))
+		pos2 = (double)g_pstPlayStat->seek_pos / AV_TIME_BASE;
+	printf("after fast %f\n",pos2);
+#if 0
 	char speedMode[16] = {0};
 
 	if (g_bPlaying)
@@ -961,7 +1059,7 @@ static bool onButtonClick_Button_fast(ZKButton *pButton) {
 
 		// sendmessage to adjust speed
 	}
-
+#endif
     return false;
 }
 static bool onButtonClick_Button_voice(ZKButton *pButton) {
@@ -1006,4 +1104,9 @@ static void onProgressChanged_Seekbar_volumn(ZKSeekBar *pSeekBar, int progress) 
 		MI_AO_SetVolume(AUDIO_DEV, vol);
 		MI_AO_SetMute(AUDIO_DEV, g_bMute);
 	}
+}
+static bool onButtonClick_Button1(ZKButton *pButton) {
+    //LOGD(" ButtonClick Button1 !!!\n");
+	mWindow1Ptr->showWnd();
+    return false;
 }
