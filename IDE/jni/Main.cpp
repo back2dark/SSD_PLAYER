@@ -7,6 +7,7 @@ extern "C" {
 
 void onEasyUIInit(EasyUIContext *pContext) {
 	// 初始化时打开串口
+	printf("get uart name %s\n", CONFIGMANAGER->getUartName().c_str());
 	//UARTCONTEXT->openUart(CONFIGMANAGER->getUartName().c_str(), CONFIGMANAGER->getUartBaudRate());
 }
 

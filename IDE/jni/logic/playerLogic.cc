@@ -137,10 +137,11 @@ static bool g_bPlayInList = false;
 static std::string fileName;
 static player_stat_t *g_pstPlayStat = NULL;
 
-static int64_t g_site = 0;
-static int64_t g_offset = 0;
-static int g_press = 0;
-static int g_unpress = 0;
+// play pos
+static long long g_firstPlayPos = PLAY_INIT_POS;
+static long long g_duration = 0;
+
+
 
 void SetPlayingStatus(bool bPlaying)
 {
@@ -169,9 +170,11 @@ MI_S32 CreatePlayerDev()
     MI_U64 u64Pts = 0;
     MI_DISP_PubAttr_t stPubAttr;
     MI_DISP_VideoLayerAttr_t stLayerAttr;
+
     MI_SYS_ChnPort_t stDivpChnPort;
     MI_DIVP_ChnAttr_t stDivpChnAttr;
     MI_DIVP_OutputPortAttr_t stOutputPortAttr;
+
     MI_DISP_DEV dispDev = DISP_DEV;
     MI_DISP_LAYER dispLayer = DISP_LAYER;
     MI_U32 u32InputPort = DISP_INPUTPORT;
@@ -221,6 +224,7 @@ MI_S32 CreatePlayerDev()
     stDispChnPort.u32DevId = DISP_DEV;
     stDispChnPort.u32ChnId = 0;
     stDispChnPort.u32PortId = DISP_INPUTPORT;
+
     MI_DISP_GetInputPortAttr(dispLayer, u32InputPort, &stInputPortAttr);
     stInputPortAttr.stDispWin.u16X      = 0;
     stInputPortAttr.stDispWin.u16Y      = 0;
@@ -235,12 +239,10 @@ MI_S32 CreatePlayerDev()
     MI_DISP_GetInputPortAttr(dispLayer, u32InputPort, &stInputPortAttr);
     MI_DISP_EnableInputPort(dispLayer, u32InputPort);
     MI_DISP_SetInputPortSyncMode(dispLayer, u32InputPort, E_MI_DISP_SYNC_MODE_FREE_RUN);
-
     MI_SYS_BindChnPort(&stDivpChnPort, &stDispChnPort, 30, 30);
 
     return MI_SUCCESS;
 }
-
 
 void DestroyPlayerDev()
 {
@@ -357,28 +359,67 @@ MI_S32 GetMediaInfo()
     return 0;
 }
 
-// current pos(play time) s
-MI_S32 GetCurrentPlayPos(MI_S32 s32Duration, MI_S32 s32CurrentPos)
+MI_S32 GetDuration(long long duration)
+{
+	char totalTime[32];
+	long long durationSec = duration / AV_TIME_BASE;
+
+	if (durationSec / 3600 > 99)
+	{
+		printf("file size is limited\n");
+		return -1;
+	}
+
+	memset(totalTime, 0, sizeof(totalTime));
+	sprintf(totalTime, "%02lld:%02lld:%02lld", durationSec/3600, (durationSec%3600)/60, durationSec%60);
+	mTextview_durationPtr->setText(totalTime);
+	g_duration = duration;
+
+	return 0;
+}
+
+MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
 {
     char curTime[32];
-    char totalTime[32];
+    long long curSec = 0;
     int trackPos = 0;
 
-    // update playtime static
-    memset(curTime, 0, sizeof(curTime));
-    memset(totalTime, 0, sizeof(totalTime));
-    sprintf(curTime, "%02d:%02d:%02d", s32CurrentPos/3600, (s32CurrentPos%3600)/60, s32CurrentPos%60);
-    sprintf(totalTime, "%02d:%02d:%02d", s32Duration/3600, (s32Duration%3600)/60, s32Duration%60);
+    if (currentPos > g_duration)
+    {
+    	printf("curPos exceed duration, curPos:%lld, duration:%lld\n", currentPos, g_duration);
+    	currentPos = g_duration;
+    }
 
+    // update playtime static
+    if (g_firstPlayPos < 0)
+    	curSec = 0;
+    else
+    {
+    	//long long curTime = (currentPos - g_firstPlayPos) % 1000000;
+    	long long curTime = currentPos % 1000000;
+    	//printf("curTime:%lld, frame_duration:%lld, curPos:%lld, firstPos:%lld\n", curTime, frame_duration, currentPos, g_firstPlayPos);
+
+    	if (curTime > frame_duration/2 && curTime <= (1000000 - frame_duration/2))
+    		return 0;
+    }
+
+    curSec = currentPos / AV_TIME_BASE;
+
+    memset(curTime, 0, sizeof(curTime));
+    sprintf(curTime, "%02lld:%02lld:%02lld", curSec/3600, (curSec%3600)/60, curSec%60);
     mTextview_curtimePtr->setText(curTime);
-	mTextview_durationPtr->setText(totalTime);
 
     // update progress bar
-    trackPos = (s32CurrentPos * mSeekbar_progressPtr->getMax()) / s32Duration;
+    trackPos = (currentPos * mSeekbar_progressPtr->getMax()) / g_duration;
     mSeekbar_progressPtr->setProgress(trackPos);
+
+    if (g_firstPlayPos < 0)
+    	g_firstPlayPos = currentPos;
 
     return 0;
 }
+
+
 
 // MI display video
 MI_S32 DisplayVideo(MI_S32 s32DispWidth, MI_S32 s32DispHeight, void *pYData, void *pUVData)
@@ -388,29 +429,31 @@ MI_S32 DisplayVideo(MI_S32 s32DispWidth, MI_S32 s32DispHeight, void *pYData, voi
     MI_SYS_BufConf_t stBufConf;
     MI_SYS_BufInfo_t stBufInfo;
 
-    pstSysChnPort.eModId    = E_MI_MODULE_ID_DIVP;
-    pstSysChnPort.u32ChnId  = 0;
-    pstSysChnPort.u32DevId  = 0;
+    pstSysChnPort.eModId = E_MI_MODULE_ID_DIVP;
+    pstSysChnPort.u32ChnId = 0;
+    pstSysChnPort.u32DevId = 0;
     pstSysChnPort.u32PortId = 0;
 
     memset(&stBufInfo , 0 , sizeof(MI_SYS_BufInfo_t));
     memset(&stBufConf , 0 , sizeof(MI_SYS_BufConf_t));
 
-    stBufConf.eBufType                  = E_MI_SYS_BUFDATA_FRAME;
-    stBufConf.u64TargetPts              = 0;
-    stBufConf.stFrameCfg.u16Width       = s32DispWidth;
-    stBufConf.stFrameCfg.u16Height      = s32DispHeight;
-    stBufConf.stFrameCfg.eFormat        = E_MI_SYS_PIXEL_FRAME_YUV_SEMIPLANAR_420;
+    stBufConf.eBufType = E_MI_SYS_BUFDATA_FRAME;
+    stBufConf.u64TargetPts = 0;
+    stBufConf.stFrameCfg.u16Width = s32DispWidth;
+    stBufConf.stFrameCfg.u16Height = s32DispHeight;
+    stBufConf.stFrameCfg.eFormat = E_MI_SYS_PIXEL_FRAME_YUV_SEMIPLANAR_420;
     stBufConf.stFrameCfg.eFrameScanMode = E_MI_SYS_FRAME_SCAN_MODE_PROGRESSIVE;
 
     if(MI_SUCCESS == MI_SYS_ChnInputPortGetBuf(&pstSysChnPort,&stBufConf,&stBufInfo,&hHandle, -1))
     {
         stBufInfo.stFrameData.eCompressMode = E_MI_SYS_COMPRESS_MODE_NONE;
-        stBufInfo.stFrameData.eFieldType    = E_MI_SYS_FIELDTYPE_NONE;
-        stBufInfo.stFrameData.eTileMode     = E_MI_SYS_FRAME_TILE_MODE_NONE;
-        stBufInfo.bEndOfStream              = FALSE;
-        
-        int bufsize, index;
+        stBufInfo.stFrameData.eFieldType = E_MI_SYS_FIELDTYPE_NONE;
+        stBufInfo.stFrameData.eTileMode = E_MI_SYS_FRAME_TILE_MODE_NONE;
+        stBufInfo.bEndOfStream = FALSE;
+
+        //memcpy(stBufInfo.stFrameData.pVirAddr[0], pYData, s32DispWidth*s32DispHeight);
+        //memcpy(stBufInfo.stFrameData.pVirAddr[1], pUVData, s32DispWidth*s32DispHeight/2);
+		int bufsize, index;
         bufsize = s32DispWidth * s32DispHeight;
 
         //printf("frame width : %d, height : %d\n", s32DispWidth, s32DispHeight);
@@ -434,49 +477,6 @@ MI_S32 DisplayVideo(MI_S32 s32DispWidth, MI_S32 s32DispHeight, void *pYData, voi
 					   stBufInfo.stFrameData.u16Width);				    
 			}
 		}
-
-		//FILE *fpread = fopen("pframe_1080.yuv", "a+");
-		//fwrite(pYData,  bufsize    , 1, fpread);
-		//fwrite(pUVData, bufsize / 2, 1, fpread);
-		//fclose(fpread);
-
-        MI_SYS_ChnInputPortPutBuf(hHandle ,&stBufInfo , FALSE);
-    }
-
-    return 0;
-}
-
-MI_S32 DisplayVideo2(MI_S32 s32DispWidth, MI_S32 s32DispHeight, void *pYData, void *pUVData)
-{
-    MI_SYS_BUF_HANDLE hHandle;
-    MI_SYS_ChnPort_t pstSysChnPort;
-    MI_SYS_BufConf_t stBufConf;
-    MI_SYS_BufInfo_t stBufInfo;
-
-    pstSysChnPort.eModId = E_MI_MODULE_ID_DISP;
-    pstSysChnPort.u32ChnId = 0;
-    pstSysChnPort.u32DevId = 0;
-    pstSysChnPort.u32PortId = 0;
-
-    memset(&stBufInfo , 0 , sizeof(MI_SYS_BufInfo_t));
-    memset(&stBufConf , 0 , sizeof(MI_SYS_BufConf_t));
-
-    stBufConf.eBufType = E_MI_SYS_BUFDATA_FRAME;
-    stBufConf.u64TargetPts = 0;
-    stBufConf.stFrameCfg.u16Width  = s32DispWidth;
-    stBufConf.stFrameCfg.u16Height = s32DispHeight;
-    stBufConf.stFrameCfg.eFormat = E_MI_SYS_PIXEL_FRAME_YUV_SEMIPLANAR_420;
-    stBufConf.stFrameCfg.eFrameScanMode = E_MI_SYS_FRAME_SCAN_MODE_PROGRESSIVE;
-
-    if(MI_SUCCESS == MI_SYS_ChnInputPortGetBuf(&pstSysChnPort,&stBufConf,&stBufInfo,&hHandle, -1))
-    {
-        stBufInfo.stFrameData.eCompressMode = E_MI_SYS_COMPRESS_MODE_NONE;
-        stBufInfo.stFrameData.eFieldType = E_MI_SYS_FIELDTYPE_NONE;
-        stBufInfo.stFrameData.eTileMode = E_MI_SYS_FRAME_TILE_MODE_NONE;
-        stBufInfo.bEndOfStream = FALSE;
-
-        memcpy(stBufInfo.stFrameData.pVirAddr[0], pYData, s32DispWidth*s32DispHeight);
-        memcpy(stBufInfo.stFrameData.pVirAddr[1], pUVData, s32DispWidth*s32DispHeight/2);
 
         MI_SYS_ChnInputPortPutBuf(hHandle ,&stBufInfo , FALSE);
     }
@@ -538,6 +538,10 @@ MI_S32 PlayComplete()
 	mTextview_speedPtr->setText("");
 	g_bShowPlayToolBar = FALSE;
 
+	// reset pts
+	g_firstPlayPos = PLAY_INIT_POS;
+	//g_lastPos = PLAY_INIT_POS;
+
 	EASYUICONTEXT->goBack();
     return 0;
 }
@@ -567,7 +571,10 @@ MI_S32 PlayError()
 static void SetPlayerControlCallBack(player_stat_t *is)
 {
 	is->playerController.fpGetMediaInfo = GetMediaInfo;
+	is->playerController.fpGetDuration = GetDuration;
 	is->playerController.fpGetCurrentPlayPos = GetCurrentPlayPos;
+	is->playerController.fpGetCurrentPlayPosFromVideo = NULL;
+	is->playerController.fpGetCurrentPlayPosFromAudio = NULL;
 	is->playerController.fpDisplayVideo = DisplayVideo;
 	is->playerController.fpPlayAudio = PlayAudio;
 	is->playerController.fpPauseAudio = PauseAudio;
@@ -586,8 +593,6 @@ static void SetPlayerControlCallBack(player_stat_t *is)
 static S_ACTIVITY_TIMEER REGISTER_ACTIVITY_TIMER_TAB[] = {
 	//{0,  6000}, //定时器id=0, 时间间隔6秒
 	//{1,  1000},
-	  {0,  500},
-	  {1,  1000},
 };
 
 /**
@@ -599,13 +604,15 @@ static void onUI_init(){
 
 	// init play view real size
 	LayoutPosition layoutPos = mVideoview_videoPtr->getPosition();
-	g_playViewWidth = 1024;//layoutPos.mWidth * PANEL_MAX_WIDTH / UI_MAX_WIDTH;
-	g_playViewHeight = 600;//ALIGN_DOWN(layoutPos.mHeight * PANEL_MAX_HEIGHT / UI_MAX_HEIGHT, 2);
+	g_playViewWidth = layoutPos.mWidth * PANEL_MAX_WIDTH / UI_MAX_WIDTH;
+	g_playViewHeight = ALIGN_DOWN(layoutPos.mHeight * PANEL_MAX_HEIGHT / UI_MAX_HEIGHT, 2);
 	printf("play view size: w=%d, h=%d\n", g_playViewWidth, g_playViewHeight);
+
+	// init pts
+	g_firstPlayPos = PLAY_INIT_POS;
 
 	// divp use window max width & height default, when play file, the inputAttr of divp will be set refer to file size.
 	CreatePlayerDev();
-	//CreatePlayerDev2(&stPanelParam, g_playViewWidth, g_playViewHeight);
 }
 
 /**
@@ -614,15 +621,12 @@ static void onUI_init(){
 static void onUI_intent(const Intent *intentPtr) {
     if (intentPtr != NULL) {
 //#ifdef SUPPORT_PLAYER_MODULE
-    	char curTime[] = "--:--:--";
-    	char totalTime[] = "--:--:--";
     	fileName = intentPtr->getExtra("filepath");
     	// init player
     	ResetSpeedMode();
     	StartPlayVideo();
     	StartPlayAudio();
 
-    	//g_pstPlayStat = player_init("/mnt/nfs/720p_30p.mpg");
     	g_pstPlayStat = player_init(fileName.c_str());
 		if (!g_pstPlayStat)
 		{
@@ -632,8 +636,7 @@ static void onUI_intent(const Intent *intentPtr) {
 			return;
 		}
 
-		printf("test video file name is : %s\n", g_pstPlayStat->filename);
-		printf("here\n");
+		printf("video file name is : %s\n", g_pstPlayStat->filename);
 
 		// sendmessage to play file
 		g_bPlaying = TRUE;
@@ -642,44 +645,12 @@ static void onUI_intent(const Intent *intentPtr) {
 		SetPlayerControlCallBack(g_pstPlayStat);
 		printf("open_demux\n");
 		open_demux(g_pstPlayStat);
-
-        // 防止播到没有视频流文件时程序挂掉
-		if (g_pstPlayStat->video_idx >= 0) {
-		    printf("open_video\n");
-		    open_video(g_pstPlayStat);
-		}
-        // 防止播到没有音频流文件时程序挂掉
-		if (g_pstPlayStat->audio_idx >= 0) {
-		    printf("open_audio\n");
-		    open_audio(g_pstPlayStat);
-		}
-		
+		printf("open_video\n");
+		open_video(g_pstPlayStat);
+		printf("open_audio\n");
+		open_audio(g_pstPlayStat);
 		SetPlayingStatus(true);
 		SetPlayerVolumn(20);
-
-		if (g_pstPlayStat->p_fmt_ctx->duration > 0)
-		{
-			unsigned int second = g_pstPlayStat->p_fmt_ctx->duration / AV_TIME_BASE;
-			if (second / 3600 > 99)
-			{
-				printf("file size is limited\n");
-				return;
-			}
-
-			sprintf(totalTime, "%02d:%02d:%02d", (second/3600), ((second%3600) / 60), (second % 60));
-		}
-		int sec,min,hour;
-		sec = g_pstPlayStat->p_fmt_ctx->duration / AV_TIME_BASE;
-		min = sec / 60;
-		hour = min / 60;
-		char time_info[50];
-		sprintf(time_info,"%02d:%02d:%02d",(hour % 24),(min % 60),(sec % 60));
-		printf("all %s\n",time_info);
-
-		//mTextview_curtimePtr->setText(curTime);
-		mTextview_durationPtr->setText(totalTime);
-
-
 //#endif
     }
 }
@@ -704,7 +675,8 @@ static void onUI_hide() {
 static void onUI_quit() {
 	printf("destroy player dev\n");
 	DestroyPlayerDev();
-	//DestroyPlayerDev2();
+
+	g_firstPlayPos = PLAY_INIT_POS;
 }
 
 /**
@@ -726,32 +698,7 @@ static void onProtocolDataUpdate(const SProtocolData &data) {
  */
 static bool onUI_Timer(int id){
 	switch (id) {
-	case 0:
-		int sec1,min1,hour1;
-		sec1 = g_pstPlayStat->video_clk.pts;
-		min1 = sec1 / 60;
-		hour1 = min1 / 60;
-		char time_play[50];
-		sprintf(time_play,"%02d:%02d:%02d",(hour1 % 24),(min1 % 60),(sec1 %60));
-		//printf("%d,%d,%d",hour1,min1,sec1);
-		mTextview_curtimePtr->setText(time_play);
-		//mTextview_curtimePtr->setText(time_play);
-		break;
-	case 1:
-		printf("time 1\n");
-		int process;
-		int whole_time = g_pstPlayStat->p_fmt_ctx->duration / AV_TIME_BASE;
-		int sec = g_pstPlayStat->video_clk.pts;
-		process = sec * 100 / whole_time;
-		if(process > 100)
-			process = 100;
-		process = sec * 100 / whole_time;
-		if(process > 100)
-			process = 100;
-		printf("progress %d\n",process);
-		mSeekbar_progressPtr->setProgress(process);
 
-		break;
 		default:
 			break;
 	}
@@ -783,35 +730,27 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 }
 static void onProgressChanged_Seekbar_progress(ZKSeekBar *pSeekBar, int progress) {
     //LOGD(" ProgressChanged Seekbar_progress %d !!!\n", progress);
-	if(pSeekBar->isPressed())
-		g_press = 1;
-
-	if(!pSeekBar->isPressed())
-		g_unpress = 1;
-	//printf("press %d\nun %d\n",g_press,g_unpress);
-	int64_t site, offset;
-	double s_time;
-	site = progress * g_pstPlayStat->p_fmt_ctx->duration / 100 ;
-	if (g_pstPlayStat->video_idx >= 0)
-	{
-		s_time = g_pstPlayStat->video_clk.pts;
-	}
-	else if (g_pstPlayStat->audio_idx >= 0)
-		s_time = g_pstPlayStat->audio_clk.pts;
-	if (site >= 0 && site <= g_pstPlayStat->p_fmt_ctx->duration)
-	{
-		site += g_pstPlayStat->p_fmt_ctx->start_time;
-		offset = site - s_time * AV_TIME_BASE;
-		//printf("off %lld\n",site,offset);
-		if (offset > 3000000 || offset < -3000000)
-		{
-			//g_pstPlayStat->seek_flags = AVSEEK_FLAG_FRAME;
-			//stream_seek(g_pstPlayStat, site, offset, 0);
-			g_site = site;
-			g_offset = offset;
-		}
-	}
 	// do seek stuff
+}
+
+static void onStartTrackingTouch_Seekbar_progress(ZKSeekBar *pSeekBar) {
+    //LOGD(" ProgressChanged Seekbar_progress %d !!!\n", progress);
+	// do seek stuff
+	if (!g_bPause)
+		toggle_pause(g_pstPlayStat);
+}
+
+static void onStopTrackingTouch_Seekbar_progress(ZKSeekBar *pSeekBar) {
+    //LOGD(" ProgressChanged Seekbar_progress %d !!!\n", progress);
+	// do seek stuff
+	int progress = pSeekBar->getProgress();
+	long long curPos = progress * g_duration / mSeekbar_progressPtr->getMax();
+	printf("progress value is %d, max value is %d, duration is %lld, curPos is %lld\n", progress, mSeekbar_progressPtr->getMax(),
+			g_duration, curPos);
+	stream_seek(g_pstPlayStat, curPos, 0, 0);
+
+	if (!g_bPause)
+		toggle_pause(g_pstPlayStat);
 }
 
 static bool onButtonClick_sys_back(ZKButton *pButton) {
@@ -820,42 +759,12 @@ static bool onButtonClick_sys_back(ZKButton *pButton) {
 }
 static bool onButtonClick_Button_play(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_play !!!\n");
-//	if (g_bPlaying)
-//	{
-//		g_bPause = !g_bPause;
-//		// sendmessage to pause/resume playing
-//		toggle_pause(g_pstPlayStat);
-//	}
-//	else
-//	{
-//		g_bPlaying = TRUE;
-//		g_bPause = FALSE;
-//
-//		// sendmessage to start playing
-//		StartPlayVideo();
-//		StartPlayAudio();
-//
-//		printf("init player, file is %s\n", fileName.c_str());
-//
-//		g_pstPlayStat = player_init(fileName.c_str());
-//		if (!g_pstPlayStat)
-//		{
-//			StopPlayAudio();
-//			StopPlayVideo();
-//			return;
-//		}
-//
-//		printf("open_demux\n");
-//		open_demux(g_pstPlayStat);
-//		printf("open_video\n");
-//		open_video(g_pstPlayStat);
-//		printf("open_audio\n");
-//		open_audio(g_pstPlayStat);
-//	}
-
-	g_bPause = !g_bPause;
-	toggle_pause(g_pstPlayStat);
-	SetPlayingStatus(!g_bPause);
+	if (g_bPlaying)
+	{
+		g_bPause = !g_bPause;
+		toggle_pause(g_pstPlayStat);
+		SetPlayingStatus(!g_bPause);
+	}
 
     return false;
 }
@@ -881,19 +790,6 @@ static bool onButtonClick_Button_stop(ZKButton *pButton) {
 
 static bool onButtonClick_Button_slow(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_slow !!!\n");
-
-	double incr, pos, pos2;
-	incr = -5.0;
-	pos = get_master_clock(g_pstPlayStat);
-	if (isnan(pos))
-		pos = (double)g_pstPlayStat->seek_pos / AV_TIME_BASE;
-	pos += incr;
-	if (g_pstPlayStat->p_fmt_ctx->start_time != AV_NOPTS_VALUE && pos < g_pstPlayStat->p_fmt_ctx->start_time / (double)AV_TIME_BASE)
-		pos = g_pstPlayStat->p_fmt_ctx->start_time / (double)AV_TIME_BASE;
-	g_pstPlayStat->seek_flags = AVSEEK_FLAG_FRAME;
-	stream_seek(g_pstPlayStat, (int64_t)(pos * AV_TIME_BASE), (int64_t)(incr * AV_TIME_BASE), 0);
-
-#if 0
 	char speedMode[16] = {0};
 
 	if (g_bPlaying)
@@ -966,28 +862,12 @@ static bool onButtonClick_Button_slow(ZKButton *pButton) {
 
 		// sendmessage to adjust speed
 	}
-#endif
+
     return false;
 }
 
 static bool onButtonClick_Button_fast(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_fast !!!\n");
-	double incr, pos, pos2;
-	incr = 8.0;
-	pos = get_master_clock(g_pstPlayStat);
-	if (isnan(pos))
-		pos = (double)g_pstPlayStat->seek_pos / AV_TIME_BASE;
-	printf("now %f\n",pos);
-	pos += incr;
-	if (g_pstPlayStat->p_fmt_ctx->start_time != AV_NOPTS_VALUE && pos > g_pstPlayStat->p_fmt_ctx->duration / (double)AV_TIME_BASE)
-		pos = g_pstPlayStat->p_fmt_ctx->duration / (double)AV_TIME_BASE;
-	g_pstPlayStat->seek_flags = AVSEEK_FLAG_FRAME;
-	stream_seek(g_pstPlayStat, (int64_t)(pos * AV_TIME_BASE), (int64_t)(incr * AV_TIME_BASE), 0);
-	pos2 = get_master_clock(g_pstPlayStat);
-	if (isnan(pos2))
-		pos2 = (double)g_pstPlayStat->seek_pos / AV_TIME_BASE;
-	printf("after fast %f\n",pos2);
-#if 0
 	char speedMode[16] = {0};
 
 	if (g_bPlaying)
@@ -1059,25 +939,11 @@ static bool onButtonClick_Button_fast(ZKButton *pButton) {
 
 		// sendmessage to adjust speed
 	}
-#endif
+
     return false;
 }
 static bool onButtonClick_Button_voice(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_voice !!!\n");
-//	MI_S32 vol = 0;
-//
-//	if (g_s32VolValue)
-//		vol = g_s32VolValue * (MAX_ADJUST_AO_VOLUME - MIN_ADJUST_AO_VOLUME) / 100 + MIN_ADJUST_AO_VOLUME;
-//	else
-//		vol = MIN_AO_VOLUME;
-//	g_bMute = !g_bMute;
-//
-//	MI_AO_SetVolume(AUDIO_DEV, vol);
-//	MI_AO_SetMute(AUDIO_DEV, g_bMute);
-//
-//	SetMuteStatus(g_bMute);
-//	SetPlayerVolumn(g_s32VolValue);
-
 	g_bMute = !g_bMute;
 	MI_AO_SetMute(AUDIO_DEV, g_bMute);
 	SetMuteStatus(g_bMute);
@@ -1104,9 +970,4 @@ static void onProgressChanged_Seekbar_volumn(ZKSeekBar *pSeekBar, int progress) 
 		MI_AO_SetVolume(AUDIO_DEV, vol);
 		MI_AO_SetMute(AUDIO_DEV, g_bMute);
 	}
-}
-static bool onButtonClick_Button1(ZKButton *pButton) {
-    //LOGD(" ButtonClick Button1 !!!\n");
-	mWindow1Ptr->showWnd();
-    return false;
 }

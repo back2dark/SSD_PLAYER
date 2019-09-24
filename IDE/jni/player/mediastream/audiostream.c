@@ -458,6 +458,16 @@ static void* audio_playing_thread(void *arg)
                 audio_callback_time / 1000000.0);
             //printf("audio clk: %lf,curtime: %ld,audio_callback_time: %ld\n",is->audio_clock,is->audio_clock_serial,audio_callback_time);
             //printf("update clk pts: %lf,lud: %lf,dif: %lf\n",is->audio_clk.pts,is->audio_clk.last_updated,is->audio_clk.pts_drift);
+
+            // update ui pos
+            if (is->playerController.fpGetCurrentPlayPosFromAudio)
+            {
+            	long long audioPts = (long long)(is->audio_clk.pts * 1000000LL);
+            	long long frame_duration = 1000000 / AUDIO_INPUT_SAMPRATE;
+            	//printf("audio pt:%f, audio drift_pts:%f, duration:%lld, frame_duration:%lld", is->audio_clk.pts, is->audio_clk.pts_drift, is->p_fmt_ctx->duration, frame_duration);
+            	//is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, is->p_fmt_ctx->duration, frame_duration);
+            	is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, frame_duration);
+            }
 		}
     }
 
@@ -570,9 +580,11 @@ static void sdl_audio_callback(void *opaque, uint8_t *stream, int len)
 
 int open_audio(player_stat_t *is)
 {	
-    open_audio_stream(is);
-	sleep(1);
-    open_audio_playing(is);
+	if (is && is->audio_idx >= 0)
+	{
+		open_audio_stream(is);
+		open_audio_playing(is);
+	}
 
     return 0;
 }

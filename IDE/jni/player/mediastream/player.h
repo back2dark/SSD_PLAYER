@@ -65,6 +65,7 @@ extern "C" {               // 告诉编译器下列代码要以C链接约定的�
 #define SAMPLE_QUEUE_SIZE 9
 #define FRAME_QUEUE_SIZE FFMAX(SAMPLE_QUEUE_SIZE, FFMAX(VIDEO_PICTURE_QUEUE_SIZE, SUBPICTURE_QUEUE_SIZE))
 
+#define PLAY_INIT_POS	-1
 
 #define FF_QUIT_EVENT    (SDL_USEREVENT + 2)
 
@@ -135,9 +136,11 @@ typedef struct {
 
 typedef struct {
     MI_S32 (*fpGetMediaInfo)();
-    MI_S32 (*fpGetCurrentPlayPos)(MI_S32 s32Duration, MI_S32 s32CurrentPos);
+    MI_S32 (*fpGetDuration)(long long duration);
+    MI_S32 (*fpGetCurrentPlayPos)(long long currentPos, long long frame_duration);
+	MI_S32 (*fpGetCurrentPlayPosFromVideo)(long long currentPos, long long frame_duration);
+	MI_S32 (*fpGetCurrentPlayPosFromAudio)(long long currentPos, long long frame_duration);
     MI_S32 (*fpDisplayVideo)(MI_S32 s32Width, MI_S32 s32Height, void *pYData, void *pUVData);
-    //MI_S32 (*fpDisplayVideo)(void *pYData, void *pUVData);
     MI_S32 (*fpPlayAudio)(MI_U8 *pu8AudioData, MI_U32 u32DataLen);
     MI_S32 (*fpPauseAudio)();
     MI_S32 (*fpResumeAudio)();

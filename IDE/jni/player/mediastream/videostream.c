@@ -172,8 +172,9 @@ static void* video_decode_thread(void *arg)
 
         duration = (frame_rate.num && frame_rate.den ? av_q2d((AVRational){frame_rate.den, frame_rate.num}) : 0);   // 当前帧播放时长
 		pts = (p_frame->pts == AV_NOPTS_VALUE) ? NAN : p_frame->pts * av_q2d(tb);   // 当前帧显示时间戳
-	
-//		printf("frame duration : %f. video frame clock : %f.\n", duration, pts);
+
+		//printf("frame duration : %f. video frame clock : %f.\n", duration, pts);
+
         ret = queue_picture(is, p_frame, pts, duration, p_frame->pkt_pos);   // 将当前帧压入frame_queue
         av_frame_unref(p_frame);
 
@@ -286,7 +287,7 @@ static void video_display(player_stat_t *is)
 }
 
 /* called to display each frame */
-static int video_refresh(void *opaque, double *remaining_time)
+static void video_refresh(void *opaque, double *remaining_time)
 {
 
     player_stat_t *is = (player_stat_t *)opaque;
@@ -306,7 +307,7 @@ retry:
 			//printf("video file has been played completely! packet num : %d.\n", is->video_pkt_queue.nb_packets);
 			is->playerController.fpPlayComplete();
 		}
-        return 0;
+        return;
     }
 
     double last_duration, duration, delay;
@@ -335,7 +336,7 @@ retry:
         *remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
         // 播放时刻未到，则不播放，直接返回
         //printf("not ready play\n");
-        return 0;
+        return;
     }
 
     // 更新frame_timer值
@@ -354,6 +355,18 @@ retry:
     pthread_mutex_unlock(&is->video_frm_queue.mutex);
 
 //	printf("frame pts : %.2f. clock pts : %.2f\n", vp->pts, is->video_clk.pts);
+
+    // update ui pos
+    if (is->playerController.fpGetCurrentPlayPosFromVideo)
+    {
+    	long long videoPts = (long long)(is->video_clk.pts * 1000000LL);
+    	AVRational frame_rate = av_guess_frame_rate(is->p_fmt_ctx, is->p_video_stream, NULL);
+    	long long frame_duration = 1000000 / frame_rate.num * frame_rate.den;
+    	//printf("video pts: %f, drift_pts: %f, duration: %lld, frame_duration:%lld\n", is->video_clk.pts, is->video_clk.pts_drift,
+    	//		is->p_fmt_ctx->duration, frame_duration);
+    	//is->playerController.fpGetCurrentPlayPosFromVideo(videoPts, is->p_fmt_ctx->duration, frame_duration);
+    	is->playerController.fpGetCurrentPlayPosFromVideo(videoPts, frame_duration);
+    }
 
     // 是否要丢弃未能及时播放的视频帧
     if (frame_queue_nb_remaining(&is->video_frm_queue) > 1)  // 队列中未显示帧数>1(只有一帧则不考虑丢帧)
@@ -380,8 +393,6 @@ display:
     video_display(is);                      // 取出当前帧vp(若有丢帧是nextvp)进行播放
     if (!is->paused)
 	    frame_queue_next(&is->video_frm_queue);
-
-    return 0;
 }
 
 static void* video_playing_thread(void *arg)
@@ -554,9 +565,12 @@ static int open_video_stream(player_stat_t *is)
 
 int open_video(player_stat_t *is)
 {
-    open_video_stream(is);
-    sleep(1);
-    open_video_playing(is);
+	if (is && is->video_idx >= 0)
+	{
+		open_video_stream(is);
+		sleep(1);
+		open_video_playing(is);
+	}
 
     return 0;
 }
