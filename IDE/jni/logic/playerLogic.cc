@@ -86,6 +86,8 @@
 #define MIN_ADJUST_AO_VOLUME    -10
 #define MAX_ADJUST_AO_VOLUME    20
 
+#define VOL_ADJUST_FACTOR		2
+
 typedef enum
 {
     E_PLAY_FORWARD,
@@ -583,6 +585,18 @@ static void SetPlayerControlCallBack(player_stat_t *is)
 	is->playerController.fpPlayError = PlayError;
 }
 
+static void AdjustVolumeByTouch(int startPos, int endPos)
+{
+	int progress = mSeekbar_volumnPtr->getProgress();
+	// move up, vol++; move down, vol--
+	progress -= (endPos - startPos) / VOL_ADJUST_FACTOR;
+
+	progress = (progress > mSeekbar_volumnPtr->getMax())? mSeekbar_volumnPtr->getMax() : progress;
+	progress = (progress < 0)? 0 : progress;
+	mSeekbar_volumnPtr->setProgress(progress);
+
+	printf("set progress: %d\n", progress);
+}
 
 
 /**
@@ -715,13 +729,79 @@ static bool onUI_Timer(int id){
  *            触摸事件将继续传递到控件上
  */
 static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
+	static POINT touchDown;
+	static POINT touchMove;
+	static POINT lastMove;
+	static bool bValidMove = false;	// on the first move, delt y should be larger than delt x, or update touchDown point
+
+
     switch (ev.mActionStatus) {
 		case MotionEvent::E_ACTION_DOWN://触摸按下
 			//LOGD("时刻 = %ld 坐标  x = %d, y = %d", ev.mEventTime, ev.mX, ev.mY);
+			//printf("down: time=%ld, x=%d, y=%d\n", ev.mEventTime, ev.mX, ev.mY);
+			touchDown.x = ev.mX;
+			touchDown.y = ev.mY;
+			bValidMove = false;
 			break;
 		case MotionEvent::E_ACTION_MOVE://触摸滑动
+			//printf("move: time=%ld, x=%d, y=%d\n", ev.mEventTime, ev.mX, ev.mY);
+			touchMove.x = ev.mX;
+			touchMove.y = ev.mY;
+
+			if (!bValidMove)
+			{
+				if (touchMove.y == touchDown.y)
+				{
+					touchDown = touchMove;
+				}
+				else if (touchMove.x == touchDown.x)
+				{
+					bValidMove = true;
+					AdjustVolumeByTouch(touchDown.y, touchMove.y);
+					lastMove = touchMove;
+				}
+				else if ((touchMove.y-touchDown.y) > 0 && (touchMove.x-touchDown.x) > 0
+						&& (touchMove.y-touchDown.y) >= (touchMove.x-touchDown.x))
+				{
+					bValidMove = true;
+					AdjustVolumeByTouch(touchDown.y, touchMove.y);
+					lastMove = touchMove;
+				}
+				else if ((touchMove.y-touchDown.y) < 0 && (touchMove.x-touchDown.x) < 0
+						&& (touchMove.y-touchDown.y) <= (touchMove.x-touchDown.x))
+				{
+					bValidMove = true;
+					AdjustVolumeByTouch(touchDown.y, touchMove.y);
+					lastMove = touchMove;
+				}
+				else if ((touchMove.y-touchDown.y) > 0 && (touchMove.x-touchDown.x) < 0
+						&& (touchMove.y-touchDown.y) >= (touchDown.x-touchMove.x))
+				{
+					bValidMove = true;
+					AdjustVolumeByTouch(touchDown.y, touchMove.y);
+					lastMove = touchMove;
+				}
+				else if ((touchMove.y-touchDown.y) < 0 && (touchMove.x-touchDown.x) > 0
+						&& (touchDown.y-touchMove.y) >= (touchMove.x-touchDown.x))
+				{
+					bValidMove = true;
+					AdjustVolumeByTouch(touchDown.y, touchMove.y);
+					lastMove = touchMove;
+				}
+				else
+				{
+					touchDown = touchMove;
+				}
+			}
+			else
+			{
+				//printf("lastY:%d, curY:%d\n", lastMove.y, touchMove.y);
+				AdjustVolumeByTouch(lastMove.y, touchMove.y);
+				lastMove = touchMove;
+			}
 			break;
 		case MotionEvent::E_ACTION_UP:  //触摸抬起
+			//printf("up: time=%ld, x=%d, y=%d\n", ev.mEventTime, ev.mX, ev.mY);
 			break;
 		default:
 			break;

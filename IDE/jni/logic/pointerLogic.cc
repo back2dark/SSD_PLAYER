@@ -128,7 +128,7 @@ static void updateGUI() {
 	mLabel_OIL1Ptr->setText(buff3);
 
 	char buff4[50];
-	sprintf(buff4,"%d/100KM",oilTab[speedindex]);
+	sprintf(buff4,"%.1f/100KM",oilTab[speedindex]);
 	mLabel_OILPtr->setText(buff4);
 }
 
