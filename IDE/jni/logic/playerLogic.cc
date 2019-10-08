@@ -29,6 +29,8 @@
 *
 * 在Eclipse编辑器中  使用 “alt + /”  快捷键可以打开智能提示
 */
+
+#ifdef SUPPORT_PLAYER_MODULE
 #include <sys/types.h>
 #include <string.h>
 #include <time.h>
@@ -143,7 +145,65 @@ static player_stat_t *g_pstPlayStat = NULL;
 static long long g_firstPlayPos = PLAY_INIT_POS;
 static long long g_duration = 0;
 
+void ShowToolbar(bool bShow)
+{
+	mSeekbar_volumnPtr->setVisible(bShow);
+	mTextview_slashPtr->setVisible(bShow);
+	mTextview_durationPtr->setVisible(bShow);
+	mTextview_curtimePtr->setVisible(bShow);
+	mTextview_speedPtr->setVisible(bShow);
+	mButton_voicePtr->setVisible(bShow);
+	mButton_fastPtr->setVisible(bShow);
+	mButton_slowPtr->setVisible(bShow);
+	mButton_stopPtr->setVisible(bShow);
+	mButton_playPtr->setVisible(bShow);
+	mSeekbar_progressPtr->setVisible(bShow);
+}
 
+class ToolbarHideThread : public Thread {
+public:
+	void setCycleCnt(int cnt, int sleepMs) { nCycleCnt = cnt; nSleepMs = sleepMs; }
+
+protected:
+	virtual bool threadLoop() {
+		if (!nCycleCnt)
+		{
+			ShowToolbar(false);
+			return false;
+		}
+
+		sleep(nSleepMs);
+		nCycleCnt--;
+
+		return true;
+	}
+
+private:
+	int nCycleCnt;
+	int nSleepMs;
+};
+
+static ToolbarHideThread g_hideToolbarThread;
+
+// auto hide toolbar after displaying 5s
+void AudoDisplayToolbar()
+{
+	if (!g_hideToolbarThread.isRunning())
+	{
+		printf("start hide toolbar thread\n");
+		g_hideToolbarThread.setCycleCnt(100, 50);
+		g_hideToolbarThread.run("hideToolbar");
+	}
+	else
+	{
+		printf("wait thread exit\n");
+		g_hideToolbarThread.requestExitAndWait();
+		g_hideToolbarThread.setCycleCnt(100, 50);
+		g_hideToolbarThread.run("hideToolbar");
+	}
+
+	ShowToolbar(true);
+}
 
 void SetPlayingStatus(bool bPlaying)
 {
@@ -182,6 +242,7 @@ MI_S32 CreatePlayerDev()
     MI_U32 u32InputPort = DISP_INPUTPORT;
     MI_SYS_ChnPort_t stDispChnPort;
     MI_DISP_InputPortAttr_t stInputPortAttr;
+    MI_DISP_RotateConfig_t stRotateConfig;
     MI_PANEL_LinkType_e eLinkType;
 
     system("echo 12 > /sys/class/gpio/export");
@@ -215,11 +276,6 @@ MI_S32 CreatePlayerDev()
     printf("divp maxW=%d, maxH=%d, w=%d, h=%d\n", stDivpChnAttr.u32MaxWidth, stDivpChnAttr.u32MaxHeight,
     		stOutputPortAttr.u32Width, stOutputPortAttr.u32Height);
 
-    MI_DIVP_CreateChn(DIVP_CHN, &stDivpChnAttr);
-    MI_DIVP_StartChn(DIVP_CHN);
-    MI_DIVP_SetOutputPortAttr(DIVP_CHN, &stOutputPortAttr);
-    MI_SYS_SetChnOutputPortDepth(&stDivpChnPort, 0, 3);
-
     memset(&stDispChnPort, 0, sizeof(MI_SYS_ChnPort_t));
     memset(&stInputPortAttr, 0, sizeof(MI_DISP_InputPortAttr_t));
     stDispChnPort.eModId = E_MI_MODULE_ID_DISP;
@@ -227,18 +283,41 @@ MI_S32 CreatePlayerDev()
     stDispChnPort.u32ChnId = 0;
     stDispChnPort.u32PortId = DISP_INPUTPORT;
 
+    stRotateConfig.eRotateMode = E_MI_DISP_ROTATE_NONE;
+    MI_DISP_SetVideoLayerRotateMode(dispLayer, &stRotateConfig);
+
     MI_DISP_GetInputPortAttr(dispLayer, u32InputPort, &stInputPortAttr);
     stInputPortAttr.stDispWin.u16X      = 0;
     stInputPortAttr.stDispWin.u16Y      = 0;
-    stInputPortAttr.stDispWin.u16Width  = g_playViewWidth;
-    stInputPortAttr.stDispWin.u16Height = g_playViewHeight;
-    stInputPortAttr.u16SrcWidth = g_playViewWidth;
-    stInputPortAttr.u16SrcHeight = g_playViewHeight;
+	stInputPortAttr.stDispWin.u16Width  = g_playViewWidth;
+	stInputPortAttr.stDispWin.u16Height = g_playViewHeight;
+
+    if (stRotateConfig.eRotateMode == E_MI_DISP_ROTATE_NONE || stRotateConfig.eRotateMode == E_MI_DISP_ROTATE_180)
+    {
+		stInputPortAttr.u16SrcWidth = g_playViewWidth;
+		stInputPortAttr.u16SrcHeight = g_playViewHeight;
+		stOutputPortAttr.u32Width = g_playViewWidth;
+		stOutputPortAttr.u32Height = g_playViewHeight;
+    }
+    else
+    {
+		stInputPortAttr.u16SrcWidth = g_playViewHeight;
+		stInputPortAttr.u16SrcHeight = g_playViewWidth;
+		stOutputPortAttr.u32Width = g_playViewHeight;
+		stOutputPortAttr.u32Height = g_playViewWidth;
+    }
 
     printf("disp input: w=%d, h=%d\n", stInputPortAttr.u16SrcWidth, stInputPortAttr.u16SrcHeight);
+
+    MI_DIVP_CreateChn(DIVP_CHN, &stDivpChnAttr);
+	MI_DIVP_StartChn(DIVP_CHN);
+	MI_DIVP_SetOutputPortAttr(DIVP_CHN, &stOutputPortAttr);
+	MI_SYS_SetChnOutputPortDepth(&stDivpChnPort, 0, 3);
+
     MI_DISP_DisableInputPort(dispLayer, u32InputPort);
     MI_DISP_SetInputPortAttr(dispLayer, u32InputPort, &stInputPortAttr);
     MI_DISP_GetInputPortAttr(dispLayer, u32InputPort, &stInputPortAttr);
+
     MI_DISP_EnableInputPort(dispLayer, u32InputPort);
     MI_DISP_SetInputPortSyncMode(dispLayer, u32InputPort, E_MI_DISP_SYNC_MODE_FREE_RUN);
     MI_SYS_BindChnPort(&stDivpChnPort, &stDispChnPort, 30, 30);
@@ -598,7 +677,7 @@ static void AdjustVolumeByTouch(int startPos, int endPos)
 	printf("set progress: %d\n", progress);
 }
 
-
+#endif
 /**
  * 注册定时器
  * 填充数组用于注册定时器
@@ -616,6 +695,7 @@ static void onUI_init(){
     //Tips :添加 UI初始化的显示代码到这里,如:mText1Ptr->setText("123");
 	printf("create player dev\n");
 
+#ifdef SUPPORT_PLAYER_MODULE
 	// init play view real size
 	LayoutPosition layoutPos = mVideoview_videoPtr->getPosition();
 	g_playViewWidth = layoutPos.mWidth * PANEL_MAX_WIDTH / UI_MAX_WIDTH;
@@ -627,6 +707,7 @@ static void onUI_init(){
 
 	// divp use window max width & height default, when play file, the inputAttr of divp will be set refer to file size.
 	CreatePlayerDev();
+#endif
 }
 
 /**
@@ -634,7 +715,7 @@ static void onUI_init(){
  */
 static void onUI_intent(const Intent *intentPtr) {
     if (intentPtr != NULL) {
-//#ifdef SUPPORT_PLAYER_MODULE
+#ifdef SUPPORT_PLAYER_MODULE
     	fileName = intentPtr->getExtra("filepath");
     	// init player
     	ResetSpeedMode();
@@ -665,7 +746,9 @@ static void onUI_intent(const Intent *intentPtr) {
 		open_audio(g_pstPlayStat);
 		SetPlayingStatus(true);
 		SetPlayerVolumn(20);
-//#endif
+
+		AudoDisplayToolbar();
+#endif
     }
 }
 
@@ -688,9 +771,11 @@ static void onUI_hide() {
  */
 static void onUI_quit() {
 	printf("destroy player dev\n");
+#ifdef SUPPORT_PLAYER_MODULE
 	DestroyPlayerDev();
 
 	g_firstPlayPos = PLAY_INIT_POS;
+#endif
 }
 
 /**
@@ -729,11 +814,11 @@ static bool onUI_Timer(int id){
  *            触摸事件将继续传递到控件上
  */
 static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
+#ifdef SUPPORT_PLAYER_MODULE
 	static POINT touchDown;
 	static POINT touchMove;
 	static POINT lastMove;
 	static bool bValidMove = false;	// on the first move, delt y should be larger than delt x, or update touchDown point
-
 
     switch (ev.mActionStatus) {
 		case MotionEvent::E_ACTION_DOWN://触摸按下
@@ -742,6 +827,10 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 			touchDown.x = ev.mX;
 			touchDown.y = ev.mY;
 			bValidMove = false;
+
+			// show play bar when touch down
+			AudoDisplayToolbar();
+
 			break;
 		case MotionEvent::E_ACTION_MOVE://触摸滑动
 			//printf("move: time=%ld, x=%d, y=%d\n", ev.mEventTime, ev.mX, ev.mY);
@@ -799,6 +888,8 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 				AdjustVolumeByTouch(lastMove.y, touchMove.y);
 				lastMove = touchMove;
 			}
+
+			AudoDisplayToolbar();
 			break;
 		case MotionEvent::E_ACTION_UP:  //触摸抬起
 			//printf("up: time=%ld, x=%d, y=%d\n", ev.mEventTime, ev.mX, ev.mY);
@@ -806,23 +897,24 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 		default:
 			break;
 	}
+#endif
 	return false;
 }
 static void onProgressChanged_Seekbar_progress(ZKSeekBar *pSeekBar, int progress) {
     //LOGD(" ProgressChanged Seekbar_progress %d !!!\n", progress);
-	// do seek stuff
 }
 
 static void onStartTrackingTouch_Seekbar_progress(ZKSeekBar *pSeekBar) {
     //LOGD(" ProgressChanged Seekbar_progress %d !!!\n", progress);
-	// do seek stuff
+#ifdef SUPPORT_PLAYER_MODULE
 	if (!g_bPause)
 		toggle_pause(g_pstPlayStat);
+#endif
 }
 
 static void onStopTrackingTouch_Seekbar_progress(ZKSeekBar *pSeekBar) {
     //LOGD(" ProgressChanged Seekbar_progress %d !!!\n", progress);
-	// do seek stuff
+#ifdef SUPPORT_PLAYER_MODULE
 	int progress = pSeekBar->getProgress();
 	long long curPos = progress * g_duration / mSeekbar_progressPtr->getMax();
 	printf("progress value is %d, max value is %d, duration is %lld, curPos is %lld\n", progress, mSeekbar_progressPtr->getMax(),
@@ -831,6 +923,7 @@ static void onStopTrackingTouch_Seekbar_progress(ZKSeekBar *pSeekBar) {
 
 	if (!g_bPause)
 		toggle_pause(g_pstPlayStat);
+#endif
 }
 
 static bool onButtonClick_sys_back(ZKButton *pButton) {
@@ -839,18 +932,20 @@ static bool onButtonClick_sys_back(ZKButton *pButton) {
 }
 static bool onButtonClick_Button_play(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_play !!!\n");
+#ifdef SUPPORT_PLAYER_MODULE
 	if (g_bPlaying)
 	{
 		g_bPause = !g_bPause;
 		toggle_pause(g_pstPlayStat);
 		SetPlayingStatus(!g_bPause);
 	}
-
+#endif
     return false;
 }
 
 static bool onButtonClick_Button_stop(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_stop !!!\n");
+#ifdef SUPPORT_PLAYER_MODULE
 	g_bPlaying = FALSE;
 	g_bPause = FALSE;
 
@@ -865,11 +960,13 @@ static bool onButtonClick_Button_stop(ZKButton *pButton) {
 	g_bShowPlayToolBar = FALSE;
 
 	EASYUICONTEXT->goBack();
+#endif
     return false;
 }
 
 static bool onButtonClick_Button_slow(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_slow !!!\n");
+#ifdef SUPPORT_PLAYER_MODULE
 	char speedMode[16] = {0};
 
 	if (g_bPlaying)
@@ -942,12 +1039,13 @@ static bool onButtonClick_Button_slow(ZKButton *pButton) {
 
 		// sendmessage to adjust speed
 	}
-
+#endif
     return false;
 }
 
 static bool onButtonClick_Button_fast(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_fast !!!\n");
+#ifdef SUPPORT_PLAYER_MODULE
 	char speedMode[16] = {0};
 
 	if (g_bPlaying)
@@ -1019,21 +1117,23 @@ static bool onButtonClick_Button_fast(ZKButton *pButton) {
 
 		// sendmessage to adjust speed
 	}
-
+#endif
     return false;
 }
 static bool onButtonClick_Button_voice(ZKButton *pButton) {
     //LOGD(" ButtonClick Button_voice !!!\n");
+#ifdef SUPPORT_PLAYER_MODULE
 	g_bMute = !g_bMute;
 	MI_AO_SetMute(AUDIO_DEV, g_bMute);
 	SetMuteStatus(g_bMute);
 	printf("set mute to %d\n", g_bMute);
-
+#endif
     return false;
 }
 
 static void onProgressChanged_Seekbar_volumn(ZKSeekBar *pSeekBar, int progress) {
     //LOGD(" ProgressChanged Seekbar_volumn %d !!!\n", progress);
+#ifdef SUPPORT_PLAYER_MODULE
 	MI_S32 vol = 0;
 	MI_AO_ChnState_t stAoState;
 
@@ -1050,4 +1150,5 @@ static void onProgressChanged_Seekbar_volumn(ZKSeekBar *pSeekBar, int progress) 
 		MI_AO_SetVolume(AUDIO_DEV, vol);
 		MI_AO_SetMute(AUDIO_DEV, g_bMute);
 	}
+#endif
 }
