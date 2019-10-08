@@ -4,10 +4,10 @@
 int packet_queue_init(packet_queue_t *q)
 {
     memset(q, 0, sizeof(packet_queue_t));
-	
-	CheckFuncResult(pthread_mutex_init(&q->mutex, NULL));
+
+    CheckFuncResult(pthread_mutex_init(&q->mutex, NULL));
     CheckFuncResult(pthread_cond_init(&q->cond,NULL));
-	
+
     q->abort_request = 0;
     return 0;
 }

@@ -157,15 +157,14 @@ player_stat_t *player_init(const char *p_input_file)
     av_init_packet(&flush_pkt);
     flush_pkt.data = (uint8_t *)&flush_pkt;
     
-    
     packet_queue_put(&is->video_pkt_queue, &flush_pkt);
     packet_queue_put(&is->audio_pkt_queue, &flush_pkt);
 
     if (pthread_cond_init(&is->continue_read_thread,NULL) != SUCCESS)
-	{
-		printf("[%s %d]exec function failed\n", __FUNCTION__, __LINE__);
-		return NULL;
-	}
+    {
+        printf("[%s %d]exec function failed\n", __FUNCTION__, __LINE__);
+        return NULL;
+    }
 
     init_clock(&is->video_clk, &is->video_pkt_queue.serial);
     init_clock(&is->audio_clk, &is->audio_pkt_queue.serial);
@@ -190,11 +189,11 @@ static void audio_decoder_abort(player_stat_t *is)
     packet_queue_abort(&is->audio_pkt_queue);
     frame_queue_signal(&is->audio_frm_queue);
 
-	pthread_join(is->audioDecode_tid, NULL);
-	pthread_join(is->audioPlay_tid, NULL);
-	
+    pthread_join(is->audioDecode_tid, NULL);
+    pthread_join(is->audioPlay_tid, NULL);
+
     packet_queue_flush(&is->audio_pkt_queue);
-	printf("audio packet flush done!\n");
+    printf("audio packet flush done!\n");
     avcodec_free_context(&is->p_acodec_ctx);
 }
 
@@ -202,12 +201,12 @@ static void video_decoder_abort(player_stat_t *is)
 {
     packet_queue_abort(&is->video_pkt_queue);
     frame_queue_signal(&is->video_frm_queue);
-	
-	pthread_join(is->videoDecode_tid, NULL);
-	pthread_join(is->videoPlay_tid, NULL);
-	
+
+    pthread_join(is->videoDecode_tid, NULL);
+    pthread_join(is->videoPlay_tid, NULL);
+
     packet_queue_flush(&is->video_pkt_queue);
-	printf("video packet flush done!\n");
+    printf("video packet flush done!\n");
     avcodec_free_context(&is->p_vcodec_ctx);
 }
 
@@ -285,11 +284,11 @@ int player_deinit(player_stat_t *is)
     frame_queue_destory(&is->audio_frm_queue);
 
     pthread_cond_destroy(&is->continue_read_thread);
-	
+
     sws_freeContext(is->img_convert_ctx);
-	
+
     av_free(is->filename);
-	
+
     av_freep(&is);
 
     return 0;

@@ -162,7 +162,7 @@ static void* audio_decode_thread(void *arg)
             //-af->serial = is->auddec.pkt_serial;
             // 当前帧包含的(单个声道)采样数/采样率就是当前帧的播放时长
             af->duration = av_q2d((AVRational) { p_frame->nb_samples, p_frame->sample_rate });
-			//printf("audio frame pts : %d, time pts : %f, audio duration : %f.\n", p_frame->pts, af->pts, af->duration);
+            //printf("audio frame pts : %d, time pts : %f, audio duration : %f.\n", p_frame->pts, af->pts, af->duration);
             // 将frame数据拷入af->frame，af->frame指向音频frame队列尾部
             av_frame_move_ref(af->frame, p_frame);
             // 更新音频frame队列大小及写指针
@@ -235,32 +235,32 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
     av_unused double audio_clock0;
     int wanted_nb_samples;
     frame_t *af = NULL;
-	frame_queue_t *f = &is->audio_frm_queue;
+    frame_queue_t *f = &is->audio_frm_queue;
 
     if (is->paused)
         return -1;
 
     // 若队列头部可读，则由af指向可读帧
 #if 1
-	if (!(af = frame_queue_peek_readable(&is->audio_frm_queue)))
-	    return -1;
-#else	
+    if (!(af = frame_queue_peek_readable(&is->audio_frm_queue)))
+        return -1;
+#else
     while (f->size - f->rindex_shown <= 0) {
-		if (is->video_idx < 0 && is->eof && is->audio_pkt_queue.nb_packets == 0)
-		{	
-			is->audio_clock = NAN;
-			is->playerController.fpPlayComplete();
-			return -1;
-		} else {
-			pthread_mutex_lock(&f->mutex);
-        	pthread_cond_wait(&f->cond, &f->mutex);
-			pthread_mutex_unlock(&f->mutex);
-		}
+        if (is->video_idx < 0 && is->eof && is->audio_pkt_queue.nb_packets == 0)
+        {
+            is->audio_clock = NAN;
+            is->playerController.fpPlayComplete();
+            return -1;
+        } else {
+            pthread_mutex_lock(&f->mutex);
+            pthread_cond_wait(&f->cond, &f->mutex);
+            pthread_mutex_unlock(&f->mutex);
+        }
 
-		if (f->pktq->abort_request)
-			return -1;
+        if (f->pktq->abort_request)
+            return -1;
     }
-	af = &f->queue[(f->rindex + f->rindex_shown) % f->max_size];
+    af = &f->queue[(f->rindex + f->rindex_shown) % f->max_size];
 #endif
     frame_queue_next(&is->audio_frm_queue);
     // 根据frame中指定的音频参数获取缓冲区的大小
@@ -296,7 +296,7 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
                 "Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!\n",
                 af->frame->sample_rate, av_get_sample_fmt_name((enum AVSampleFormat)af->frame->format), af->frame->channels,
                 is->audio_param_tgt.freq, av_get_sample_fmt_name(is->audio_param_tgt.fmt), is->audio_param_tgt.channels);
-			swr_free(&is->audio_swr_ctx);
+            swr_free(&is->audio_swr_ctx);
             return -1;
         }
         // 使用frame中的参数更新is->audio_src，第一次更新后后面基本不用执行此if分支了，因为一个音频流中各frame通用参数一样
@@ -339,7 +339,7 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
         if (len2 < 0)
         {
             av_log(NULL, AV_LOG_ERROR, "swr_convert() failed\n");
-			goto fail;
+            goto fail;
         }
 
         if (len2 == out_count)
@@ -347,7 +347,7 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
             av_log(NULL, AV_LOG_WARNING, "audio buffer is probably too small\n");
             if (swr_init(is->audio_swr_ctx) < 0)
                 swr_free(&is->audio_swr_ctx);
-			//goto fail;
+            //goto fail;
         }
 
         is->p_audio_frm = is->audio_frm_rwr;
@@ -372,7 +372,7 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
     }
     else
     {
-    	is->audio_clock = NAN;
+        is->audio_clock = NAN;
     }
     //printf("after pts: %lf,clock: %lf\n",af->pts,is->audio_clock);
     is->audio_clock_serial = af->serial;
@@ -386,9 +386,9 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
         last_clock = is->audio_clock;
     }
 #endif
-	return resampled_data_size;
+    return resampled_data_size;
 fail:
-	av_freep(&is->audio_frm_rwr);
+    av_freep(&is->audio_frm_rwr);
     return -1;
 }
 
@@ -396,9 +396,9 @@ static void* audio_playing_thread(void *arg)
 {
     player_stat_t *is = (player_stat_t *)arg;
     int audio_size, len1,len;
-	int pause = 0;
+    int pause = 0;
     int last_pause =0;
-	
+
     printf("audio playing thread in\n");
 
     while(1)
@@ -410,7 +410,7 @@ static void* audio_playing_thread(void *arg)
         }
         int64_t audio_callback_time = av_gettime_relative();
 
-		audio_size = audio_resample(is, audio_callback_time);
+        audio_size = audio_resample(is, audio_callback_time);
         if (audio_size < 0)
         {
             /* if error, just output silence */
@@ -433,7 +433,7 @@ static void* audio_playing_thread(void *arg)
             }
             is->audio_frm_size = audio_size;
         }
-	
+
         if (is->p_audio_frm != NULL)
         {
             long long duration = (is->p_fmt_ctx->duration + (is->p_fmt_ctx->duration <= INT64_MAX - 5000 ? 5000 : 0)) / AV_TIME_BASE;
@@ -462,13 +462,13 @@ static void* audio_playing_thread(void *arg)
             // update ui pos
             if (is->playerController.fpGetCurrentPlayPosFromAudio)
             {
-            	long long audioPts = (long long)(is->audio_clk.pts * 1000000LL);
-            	long long frame_duration = 1000000 / AUDIO_INPUT_SAMPRATE;
-            	//printf("audio pt:%f, audio drift_pts:%f, duration:%lld, frame_duration:%lld", is->audio_clk.pts, is->audio_clk.pts_drift, is->p_fmt_ctx->duration, frame_duration);
-            	//is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, is->p_fmt_ctx->duration, frame_duration);
-            	is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, frame_duration);
+                long long audioPts = (long long)(is->audio_clk.pts * 1000000LL);
+                long long frame_duration = 1000000 / AUDIO_INPUT_SAMPRATE;
+                //printf("audio pt:%f, audio drift_pts:%f, duration:%lld, frame_duration:%lld", is->audio_clk.pts, is->audio_clk.pts_drift, is->p_fmt_ctx->duration, frame_duration);
+                //is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, is->p_fmt_ctx->duration, frame_duration);
+                is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, frame_duration);
             }
-		}
+        }
     }
 
     return NULL;
@@ -579,12 +579,13 @@ static void sdl_audio_callback(void *opaque, uint8_t *stream, int len)
 }
 
 int open_audio(player_stat_t *is)
-{	
-	if (is && is->audio_idx >= 0)
-	{
-		open_audio_stream(is);
-		open_audio_playing(is);
-	}
+{
+    if (is && is->audio_idx >= 0)
+    {
+        open_audio_stream(is);
+        
+        open_audio_playing(is);
+    }
 
     return 0;
 }

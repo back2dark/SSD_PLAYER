@@ -92,19 +92,19 @@ static int demux_init(player_stat_t *is)
     is->video_idx = v_idx;
     printf("audio idx: %d,video idx: %d\n",a_idx,v_idx);
 
-	double totle_seconds = p_fmt_ctx->duration * av_q2d(AV_TIME_BASE_Q);
-	printf("total time of file : %f\n", totle_seconds);
+    double totle_seconds = p_fmt_ctx->duration * av_q2d(AV_TIME_BASE_Q);
+    printf("total time of file : %f\n", totle_seconds);
 
-	if (is->audio_idx >= 0)
-    	is->p_audio_stream = p_fmt_ctx->streams[a_idx];
-	if (is->video_idx >= 0)
-    	is->p_video_stream = p_fmt_ctx->streams[v_idx];
+    if (is->audio_idx >= 0)
+        is->p_audio_stream = p_fmt_ctx->streams[a_idx];
+    if (is->video_idx >= 0)
+        is->p_video_stream = p_fmt_ctx->streams[v_idx];
 
-	// set GetCurPlayPos callback
-	if (is->video_idx >= 0)
-		is->playerController.fpGetCurrentPlayPosFromVideo = is->playerController.fpGetCurrentPlayPos;
-	else
-		is->playerController.fpGetCurrentPlayPosFromAudio = is->playerController.fpGetCurrentPlayPos;
+    // set GetCurPlayPos callback
+    if (is->video_idx >= 0)
+        is->playerController.fpGetCurrentPlayPosFromVideo = is->playerController.fpGetCurrentPlayPos;
+    else
+        is->playerController.fpGetCurrentPlayPosFromAudio = is->playerController.fpGetCurrentPlayPos;
 
     return 0;
 }
@@ -145,10 +145,10 @@ static void* demux_thread(void *arg)
     pthread_mutex_t wait_mutex;
 
     if (pthread_mutex_init(&wait_mutex, NULL) != SUCCESS)
-	{
-		printf("[%s %d]exec function failed\n", __FUNCTION__, __LINE__);
-		return NULL;
-	}
+    {
+        printf("[%s %d]exec function failed\n", __FUNCTION__, __LINE__);
+        return NULL;
+    }
 
     is->eof = 0;
 
@@ -201,9 +201,9 @@ static void* demux_thread(void *arg)
             // of the seek_pos/seek_rel variables
 
             ret = avformat_seek_file(is->p_fmt_ctx, -1, seek_min, seek_target, seek_max, is->seek_flags);
-			//ret = av_seek_frame(is->p_fmt_ctx, -1, seek_target, is->seek_flags);
+            //ret = av_seek_frame(is->p_fmt_ctx, -1, seek_target, is->seek_flags);
 
-			if (ret < 0) {
+            if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR,
                        "%s: error while seeking\n", is->p_fmt_ctx->url);
             } else {

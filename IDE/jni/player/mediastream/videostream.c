@@ -60,13 +60,13 @@ static int queue_picture(player_stat_t *is, AVFrame *src_frame, double pts, doub
 static int video_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt_queue, AVFrame *frame)
 {
     int ret;
-	
+
     while (1)
     {
         AVPacket pkt;
-	
+
         while (1)
-        {			
+        {
             if(p_pkt_queue->abort_request)
             {
                 return -1;
@@ -87,7 +87,7 @@ static int video_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt
                 }
                 else if (ret == AVERROR(EAGAIN))
                 {
-//					av_log(NULL, AV_LOG_ERROR, "cann't fetch a frame, try again!\n");
+                    //av_log(NULL, AV_LOG_ERROR, "cann't fetch a frame, try again!\n");
                     break;
                 }
                 else
@@ -99,7 +99,7 @@ static int video_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt
             else
             {
                 frame->pts = frame->best_effort_timestamp;
-//				printf("best_effort_timestamp : %lld.\n", frame->pts);
+                //printf("best_effort_timestamp : %lld.\n", frame->pts);
                 return 1;   // 成功解码得到一个视频帧或一个音频帧，则返回
             }
         }
@@ -118,17 +118,24 @@ static int video_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt
         }
         else
         {
+            // 如果是最后一个空的packet,只取frame不再送packet
+            if (pkt.data == NULL || pkt.size == 0)
+            {
+                p_codec_ctx->flags |= (1 << 5);
+                printf("send a null paket to decoder\n");
+            }
+
             // 2. 将packet发送给解码器
             //    发送packet的顺序是按dts递增的顺序，如IPBBPBB
             //    pkt.pos变量可以标识当前packet在视频文件中的地址偏移
-//			printf("send packet to decoder!\n");
+            //printf("send packet to decoder!\n");
             if (avcodec_send_packet(p_codec_ctx, &pkt) == AVERROR(EAGAIN))
             {
                 av_log(NULL, AV_LOG_ERROR, "receive_frame and send_packet both returned EAGAIN, which is an API violation.\n");
             }
             av_packet_unref(&pkt);
         }
-//		printf("exit out video_decode_frame!\n");
+        //printf("exit out video_decode_frame!\n");
     }
 }
 
@@ -151,11 +158,11 @@ static void* video_decode_thread(void *arg)
         return NULL;
     }
 
-	printf("video time base : %.2fms.\n", 1000 * av_q2d(tb));
-	printf("frame rate num : %d. frame rate den : %d.\n", frame_rate.num, frame_rate.den);
+    printf("video time base : %.2fms.\n", 1000 * av_q2d(tb));
+    printf("frame rate num : %d. frame rate den : %d.\n", frame_rate.num, frame_rate.den);
 
-	printf("get in video decode thread!\n");
-	
+    printf("get in video decode thread!\n");
+
     while (1)
     {
         if(is->abort_request)
@@ -171,9 +178,9 @@ static void* video_decode_thread(void *arg)
         }
 
         duration = (frame_rate.num && frame_rate.den ? av_q2d((AVRational){frame_rate.den, frame_rate.num}) : 0);   // 当前帧播放时长
-		pts = (p_frame->pts == AV_NOPTS_VALUE) ? NAN : p_frame->pts * av_q2d(tb);   // 当前帧显示时间戳
+        pts = (p_frame->pts == AV_NOPTS_VALUE) ? NAN : p_frame->pts * av_q2d(tb);   // 当前帧显示时间戳
 
-		//printf("frame duration : %f. video frame clock : %f.\n", duration, pts);
+        //printf("frame duration : %f. video frame clock : %f.\n", duration, pts);
 
         ret = queue_picture(is, p_frame, pts, duration, p_frame->pkt_pos);   // 将当前帧压入frame_queue
         av_frame_unref(p_frame);
@@ -269,7 +276,7 @@ static void video_display(player_stat_t *is)
     // AVFrame.*data[]: 每个数组元素指向对应plane
     // AVFrame.linesize[]: 每个数组元素表示对应plane中一行图像所占的字节数
     if (is->decode_type == SOFT_DECODING) {
-	    sws_scale(is->img_convert_ctx,                    // sws context
+        sws_scale(is->img_convert_ctx,                    // sws context
                   (const uint8_t *const *)vp->frame->data,// src slice
                   vp->frame->linesize,                    // src stride
                   0,                                      // src slice y
@@ -277,13 +284,13 @@ static void video_display(player_stat_t *is)
                   is->p_frm_yuv->data,                    // dst planes
                   is->p_frm_yuv->linesize                 // dst strides
                   );
-	
+
         //printf("displayvideo callback, w=%d, h=%d\n", is->p_vcodec_ctx->width, is->p_vcodec_ctx->height);
         //is->playerController.fpDisplayVideo(is->p_vcodec_ctx->width, is->p_vcodec_ctx->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
-    	is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
+        is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
     }
-	else if (is->decode_type == HARD_DECODING)
-		is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, vp->frame->data[0], vp->frame->data[1]);
+    else if (is->decode_type == HARD_DECODING)
+        is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, vp->frame->data[0], vp->frame->data[1]);
 }
 
 /* called to display each frame */
@@ -302,11 +309,11 @@ retry:
     if (frame_queue_nb_remaining(&is->video_frm_queue) <= 0)  // 所有帧已显示
     {    
         // if file is eof and there is no paket in queue, then do complete
-		if (is->video_idx >= 0 && is->eof && is->video_pkt_queue.nb_packets == 0)
-		{
-			//printf("video file has been played completely! packet num : %d.\n", is->video_pkt_queue.nb_packets);
-			is->playerController.fpPlayComplete();
-		}
+        if (is->video_idx >= 0 && is->eof && is->video_pkt_queue.nb_packets == 0)
+        {
+            //printf("video file has been played completely! packet num : %d.\n", is->video_pkt_queue.nb_packets);
+            is->playerController.fpPlayComplete();
+        }
         return;
     }
 
@@ -354,18 +361,18 @@ retry:
     }
     pthread_mutex_unlock(&is->video_frm_queue.mutex);
 
-//	printf("frame pts : %.2f. clock pts : %.2f\n", vp->pts, is->video_clk.pts);
+    //printf("frame pts : %.2f. clock pts : %.2f\n", vp->pts, is->video_clk.pts);
 
     // update ui pos
     if (is->playerController.fpGetCurrentPlayPosFromVideo)
     {
-    	long long videoPts = (long long)(is->video_clk.pts * 1000000LL);
-    	AVRational frame_rate = av_guess_frame_rate(is->p_fmt_ctx, is->p_video_stream, NULL);
-    	long long frame_duration = 1000000 / frame_rate.num * frame_rate.den;
-    	//printf("video pts: %f, drift_pts: %f, duration: %lld, frame_duration:%lld\n", is->video_clk.pts, is->video_clk.pts_drift,
-    	//		is->p_fmt_ctx->duration, frame_duration);
-    	//is->playerController.fpGetCurrentPlayPosFromVideo(videoPts, is->p_fmt_ctx->duration, frame_duration);
-    	is->playerController.fpGetCurrentPlayPosFromVideo(videoPts, frame_duration);
+        long long videoPts = (long long)(is->video_clk.pts * 1000000LL);
+        AVRational frame_rate = av_guess_frame_rate(is->p_fmt_ctx, is->p_video_stream, NULL);
+        long long frame_duration = 1000000 / frame_rate.num * frame_rate.den;
+        //printf("video pts: %f, drift_pts: %f, duration: %lld, frame_duration:%lld\n", is->video_clk.pts, is->video_clk.pts_drift,
+        //		is->p_fmt_ctx->duration, frame_duration);
+        //is->playerController.fpGetCurrentPlayPosFromVideo(videoPts, is->p_fmt_ctx->duration, frame_duration);
+        is->playerController.fpGetCurrentPlayPosFromVideo(videoPts, frame_duration);
     }
 
     // 是否要丢弃未能及时播放的视频帧
@@ -381,8 +388,7 @@ retry:
         }
     }
     // 删除当前读指针元素，读指针+1。若未丢帧，读指针从lastvp更新到vp；若有丢帧，读指针从vp更新到nextvp
-    // 在此处删除该帧会造成画面撕裂
-	//frame_queue_next(&is->video_frm_queue);
+    frame_queue_next(&is->video_frm_queue);
     
     if (is->step && !is->paused)
     {
@@ -391,8 +397,7 @@ retry:
 
 display:
     video_display(is);                      // 取出当前帧vp(若有丢帧是nextvp)进行播放
-    if (!is->paused)
-	    frame_queue_next(&is->video_frm_queue);
+    
 }
 
 static void* video_playing_thread(void *arg)
@@ -409,7 +414,7 @@ static void* video_playing_thread(void *arg)
         }
         if (remaining_time > 0.0)
         {
-//			printf("delay time: %lf\n",remaining_time);
+            //printf("delay time: %lf\n",remaining_time);
             av_usleep((unsigned)(remaining_time * 1000000.0));
         }
         remaining_time = REFRESH_RATE;
@@ -428,7 +433,7 @@ static int open_video_playing(void *arg)
     int ret;
     int buf_size;
     uint8_t* buffer = NULL;
-	AVPixFmtDescriptor *desc;
+    AVPixFmtDescriptor *desc;
     
     // 为AVFrame.*data[]手工分配缓冲区，用于存储sws_scale()中目的帧视频数据
     buf_size = av_image_get_buffer_size(AV_PIX_FMT_NV12,
@@ -471,7 +476,7 @@ static int open_video_playing(void *arg)
     is->img_convert_ctx = sws_getContext(is->p_vcodec_ctx->width,   // src width
                                          is->p_vcodec_ctx->height,  // src height
                                          is->p_vcodec_ctx->pix_fmt, // src format
-										 is->p_vcodec_ctx->width,   // dst width
+                                         is->p_vcodec_ctx->width,   // dst width
                                          is->p_vcodec_ctx->height,  // dst height
                                          // is->out_width,
                                          // is->out_height,
@@ -509,19 +514,19 @@ static int open_video_stream(player_stat_t *is)
     switch (p_codec_par->codec_id) 
     {
         case AV_CODEC_ID_H264 :
-			p_codec = avcodec_find_decoder_by_name("ssh264"); 
-			is->decode_type = HARD_DECODING;
-			break;
+            p_codec = avcodec_find_decoder_by_name("ssh264"); 
+            is->decode_type = HARD_DECODING;
+            break;
 
         case AV_CODEC_ID_HEVC :
-			p_codec = avcodec_find_decoder_by_name("sshevc"); 
-			is->decode_type = HARD_DECODING;
-			break;
+            p_codec = avcodec_find_decoder_by_name("sshevc"); 
+            is->decode_type = HARD_DECODING;
+            break;
 
-		default :
-			p_codec = avcodec_find_decoder(p_codec_par->codec_id);
-			is->decode_type = SOFT_DECODING;
-			break;
+        default :
+            p_codec = avcodec_find_decoder(p_codec_par->codec_id);
+            is->decode_type = SOFT_DECODING;
+            break;
     }  
     if (p_codec == NULL)
     {
@@ -554,7 +559,8 @@ static int open_video_stream(player_stat_t *is)
     }
 
     is->p_vcodec_ctx = p_codec_ctx;
-	is->p_vcodec_ctx->debug = true;
+    is->p_vcodec_ctx->debug = true;
+    is->p_vcodec_ctx->flags = 0;
     printf("codec width: %d,height: %d\n",is->p_vcodec_ctx->width,is->p_vcodec_ctx->height);
 
     // 2. 创建视频解码线程
@@ -565,12 +571,12 @@ static int open_video_stream(player_stat_t *is)
 
 int open_video(player_stat_t *is)
 {
-	if (is && is->video_idx >= 0)
-	{
-		open_video_stream(is);
-		sleep(1);
-		open_video_playing(is);
-	}
+    if (is && is->video_idx >= 0)
+    {
+        open_video_stream(is);
+
+        open_video_playing(is);
+    }
 
     return 0;
 }
