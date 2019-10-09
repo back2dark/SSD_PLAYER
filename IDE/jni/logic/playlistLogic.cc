@@ -65,13 +65,19 @@ typedef struct _FileChildInfo_t
 typedef enum _FileFilter_e
 {
 	MP4_FILTER = 0,
-	MPG_FILTER,
 	AVI_FILTER,
 	WAV_FILTER,
 	FLV_FILTER,
 	MKV_FILTER,
 	MP3_FILTER,
+	MOV_FILTER,
+	RM_FILTER,
 	RMVB_FILTER,
+	WMV_FTLTER,
+	VOB_FILTER,
+	MPG_FILTER,
+	TS_FILTER,
+	DAT_FILTER,
 	FILE_FILTER_NUM
 } FileFilter_e;
 
@@ -84,14 +90,20 @@ static char g_curDir[256] = {0};		// last access path
 static char g_selectPath[256] = {0};	// current dir full path
 static int bigMonth[] = {1, 3, 5, 7, 8, 10, 12};
 static char *g_pFileFilter[FILE_FILTER_NUM] = {
-	".mp4",
-	".mpg",
-	".avi",
-	".wav",
-	".flv",
-	".mkv",
-	".mp3",
-	".rmvb"
+		".mp4",
+		".avi",
+		".wav",
+		".flv",
+		".mkv",
+		".mp3",
+		".mov",
+		".rm",
+		".rmvb",
+		".wmv",
+		".vob",
+		".mpg",
+		".ts",
+		".dat"
 };
 
 char *getDayOfWeek(int day)
@@ -452,7 +464,7 @@ void ShowCurrentDir(FileTree_t *pRoot, std::vector<FileChildInfo_t>* pChildInfo)
 		childInfo.size = pos->size;
 		pChildInfo->push_back(childInfo);
 	}
-
+	mListview_playlistPtr->setSelection(0);
 	mListview_playlistPtr->refreshListView();
 }
 
