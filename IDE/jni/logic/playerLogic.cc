@@ -83,6 +83,7 @@
 #define AUDIO_DEV       		0
 #define AUDIO_CHN       		0
 #define AUDIO_SAMPLE_PER_FRAME  1024
+#define AUDIO_MAX_DATA_SIZE     25000
 #define MIN_AO_VOLUME           -60
 #define MAX_AO_VOLUME           30
 #define MIN_ADJUST_AO_VOLUME    -10
@@ -568,25 +569,35 @@ MI_S32 DisplayVideo(MI_S32 s32DispWidth, MI_S32 s32DispHeight, void *pYData, voi
 // MI play audio
 MI_S32 PlayAudio(MI_U8 *pu8AudioData, MI_U32 u32DataLen)
 {
+    MI_S32 data_idx = 0, data_len = u32DataLen;
     MI_AUDIO_Frame_t stAoSendFrame;
     MI_S32 s32RetSendStatus = 0;
     MI_AUDIO_DEV AoDevId = AUDIO_DEV;
     MI_AO_CHN AoChn = AUDIO_CHN;
 
     //read data and send to AO module
-    stAoSendFrame.u32Len = u32DataLen;
-    stAoSendFrame.apVirAddr[0] = pu8AudioData;
-    stAoSendFrame.apVirAddr[1] = NULL;
+    do {
+        if (data_len <= AUDIO_MAX_DATA_SIZE)
+            stAoSendFrame.u32Len = data_len;
+        else
+            stAoSendFrame.u32Len = AUDIO_MAX_DATA_SIZE;
 
-    //printf("PlayAudio\n");
-    do{
-        s32RetSendStatus = MI_AO_SendFrame(AoDevId, AoChn, &stAoSendFrame, 128);
-    }while(s32RetSendStatus == MI_AO_ERR_NOBUF);
+        stAoSendFrame.apVirAddr[0] = &pu8AudioData[data_idx];
+        stAoSendFrame.apVirAddr[1] = NULL;
 
-    if(s32RetSendStatus != MI_SUCCESS)
-    {
-        printf("[Warning]: MI_AO_SendFrame fail, error is 0x%x: \n",s32RetSendStatus);
-    }
+        data_idx += AUDIO_MAX_DATA_SIZE;
+        data_len -= AUDIO_MAX_DATA_SIZE;
+
+        //printf("PlayAudio\n");
+        do{
+            s32RetSendStatus = MI_AO_SendFrame(AoDevId, AoChn, &stAoSendFrame, 128);
+        }while(s32RetSendStatus == MI_AO_ERR_NOBUF);
+
+        if(s32RetSendStatus != MI_SUCCESS)
+        {
+            printf("[Warning]: MI_AO_SendFrame fail, error is 0x%x: \n",s32RetSendStatus);
+        }
+    }while(data_len > 0);
 
     return 0;
 }

@@ -67,7 +67,7 @@ static int audio_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt
                 }
                 else
                 {
-                    av_log(NULL, AV_LOG_WARNING, "frame->pts no\n");
+                    //av_log(NULL, AV_LOG_WARNING, "frame->pts no\n");
                 }
 
                 return 1;
