@@ -78,6 +78,18 @@ typedef enum _FileFilter_e
 	MPG_FILTER,
 	TS_FILTER,
 	DAT_FILTER,
+	M4A_FILTER,
+	MKA_FILTER,
+	RA_FILTER,
+	APE_FILTER,
+	ADTS_FILTER,
+	ASF_FILTER,
+	WMA_FILTER,
+	WEBM_FILTER,
+	DIVX_FILTER,
+	OGM_FILTER,
+	TRP_FILTER,
+	TP_FILTER,
 	FILE_FILTER_NUM
 } FileFilter_e;
 
@@ -103,8 +115,21 @@ static char *g_pFileFilter[FILE_FILTER_NUM] = {
 		".vob",
 		".mpg",
 		".ts",
-		".dat"
+		".dat",
+		".m4a",
+		".mka",
+		".ra",
+		".ape",
+		".adts",
+		".asf",
+		".wma",
+		".webm",
+		".divx",
+		".ogm",
+		".trp",
+		".tp"
 };
+
 
 char *getDayOfWeek(int day)
 {
@@ -250,8 +275,8 @@ int CreateFileTree(FileTree_t *root)
         else
         {
         	// file filter
-			if (FilterFiles(ent->d_name, g_pFileFilter, FILE_FILTER_NUM))
-				continue;
+			//if (FilterFiles(ent->d_name, g_pFileFilter, FILE_FILTER_NUM))
+			//	continue;
 
             dirFlag = 0;
         }
@@ -700,7 +725,15 @@ static void onListItemClick_Listview_playlist(ZKListView *pListView, int index, 
 		// enter to player
 		Intent* intent = new Intent();
 		intent->putExtra("filepath", g_selectPath);
-		EASYUICONTEXT->openActivity("playerActivity", intent);
+		if (FilterFiles(childInfo.name, g_pFileFilter, FILE_FILTER_NUM))
+				{
+					mWindow1_warningPtr->setVisible(true);
+				}
+				else
+				{
+					EASYUICONTEXT->openActivity("playerActivity", intent);
+
+				}
 	}
 #endif
 }
