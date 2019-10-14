@@ -275,8 +275,8 @@ int CreateFileTree(FileTree_t *root)
         else
         {
         	// file filter
-			//if (FilterFiles(ent->d_name, g_pFileFilter, FILE_FILTER_NUM))
-			//	continue;
+			if (FilterFiles(ent->d_name, g_pFileFilter, FILE_FILTER_NUM))
+				continue;
 
             dirFlag = 0;
         }
@@ -725,15 +725,10 @@ static void onListItemClick_Listview_playlist(ZKListView *pListView, int index, 
 		// enter to player
 		Intent* intent = new Intent();
 		intent->putExtra("filepath", g_selectPath);
-		if (FilterFiles(childInfo.name, g_pFileFilter, FILE_FILTER_NUM))
-				{
-					mWindow1_warningPtr->setVisible(true);
-				}
-				else
-				{
-					EASYUICONTEXT->openActivity("playerActivity", intent);
 
-				}
+		EASYUICONTEXT->openActivity("playerActivity", intent);
+
+
 	}
 #endif
 }

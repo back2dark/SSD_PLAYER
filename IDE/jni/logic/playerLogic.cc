@@ -659,7 +659,10 @@ MI_S32 PlayError()
 
     return 0;
 }
-
+void UnsupportType(bool bunsupp)
+{
+	mTextview_unsupportPtr->setVisible(bunsupp);
+}
 static void SetPlayerControlCallBack(player_stat_t *is)
 {
 	is->playerController.fpGetMediaInfo = GetMediaInfo;
@@ -750,13 +753,18 @@ static void onUI_intent(const Intent *intentPtr) {
 
 		SetPlayerControlCallBack(g_pstPlayStat);
 		printf("open_demux\n");
-		open_demux(g_pstPlayStat);
-		printf("open_video\n");
-		open_video(g_pstPlayStat);
-		printf("open_audio\n");
-		open_audio(g_pstPlayStat);
-		SetPlayingStatus(true);
-		SetPlayerVolumn(20);
+		//open_demux(g_pstPlayStat);
+		if(!open_demux(g_pstPlayStat))
+				{
+					printf("open_video\n");
+					open_video(g_pstPlayStat);
+					printf("open_audio\n");
+					open_audio(g_pstPlayStat);
+					SetPlayingStatus(true);
+					SetPlayerVolumn(20);
+				}
+				else
+					UnsupportType(true);
 
 		AudoDisplayToolbar();
 #endif
@@ -961,16 +969,24 @@ static bool onButtonClick_Button_stop(ZKButton *pButton) {
 	g_bPause = FALSE;
 
 	// sendmessage to stop playing
-	player_deinit(g_pstPlayStat);
-	StopPlayAudio();
-	StopPlayVideo();
+	if(mTextview_unsupportPtr->isVisible())
+		{
+			StopPlayAudio();
+			EASYUICONTEXT->goBack();
+		}
+		else
+		{
+			player_deinit(g_pstPlayStat);
+			StopPlayAudio();
+			StopPlayVideo();
 
-	SetPlayingStatus(false);
-	ResetSpeedMode();
-	mTextview_speedPtr->setText("");
-	g_bShowPlayToolBar = FALSE;
+			SetPlayingStatus(false);
+			ResetSpeedMode();
+			mTextview_speedPtr->setText("");
+			g_bShowPlayToolBar = FALSE;
 
-	EASYUICONTEXT->goBack();
+			EASYUICONTEXT->goBack();
+		}
 #endif
     return false;
 }
