@@ -465,6 +465,7 @@ MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
     char curTime[32];
     long long curSec = 0;
     int trackPos = 0;
+    long long curTimee = currentPos % 1000000;
 
     if (currentPos > g_duration)
     {
@@ -478,14 +479,18 @@ MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
     else
     {
     	//long long curTime = (currentPos - g_firstPlayPos) % 1000000;
-    	long long curTime = currentPos % 1000000;
+    	//long long curTime = currentPos % 1000000;
     	//printf("curTime:%lld, frame_duration:%lld, curPos:%lld, firstPos:%lld\n", curTime, frame_duration, currentPos, g_firstPlayPos);
 
-    	if (curTime > frame_duration/2 && curTime <= (1000000 - frame_duration/2))
+    	if (curTimee > frame_duration/3*2 && curTimee <= (1000000 - frame_duration/3*2))
     		return 0;
     }
 
     curSec = currentPos / AV_TIME_BASE;
+    if(curTimee > (1000000 - frame_duration/3*2))
+        	{
+        		curSec += 1;
+        	}
 
     memset(curTime, 0, sizeof(curTime));
     sprintf(curTime, "%02lld:%02lld:%02lld", curSec/3600, (curSec%3600)/60, curSec%60);

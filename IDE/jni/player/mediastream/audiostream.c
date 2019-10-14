@@ -471,7 +471,7 @@ static void* audio_playing_thread(void *arg)
             if (is->playerController.fpGetCurrentPlayPosFromAudio)
             {
                 long long audioPts = (long long)(is->audio_clk.pts * 1000000LL);
-                long long frame_duration = 1000000 / AUDIO_INPUT_SAMPRATE;
+                long long frame_duration = 1000000 / AUDIO_INPUT_SAMPRATE * 1000;
                 //printf("audio pt:%f, audio drift_pts:%f, duration:%lld, frame_duration:%lld", is->audio_clk.pts, is->audio_clk.pts_drift, is->p_fmt_ctx->duration, frame_duration);
                 //is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, is->p_fmt_ctx->duration, frame_duration);
                 is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, frame_duration);
