@@ -124,6 +124,10 @@ static int video_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt
                 p_codec_ctx->flags |= (1 << 5);
                 printf("send a null paket to decoder\n");
             }
+            else
+            {
+                p_codec_ctx->flags &= ~(1 << 5);
+            }
 
             // 2. 将packet发送给解码器
             //    发送packet的顺序是按dts递增的顺序，如IPBBPBB
@@ -210,7 +214,10 @@ static double compute_target_delay(double delay, player_stat_t *is)
     /* if video is slave, we try to correct big delays by
        duplicating or deleting a frame */
     // 视频时钟与同步时钟(如音频时钟)的差异，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
-    diff = get_clock(&is->video_clk) - get_clock(&is->audio_clk);
+    if (is->audio_idx >= 0 && is->video_idx >= 0)
+        diff = get_clock(&is->video_clk) - get_clock(&is->audio_clk);
+    else
+        return delay;
     //printf("audio pts: %lf,video pts: %lf\n",is->audio_clk.pts,is->video_clk.pts);
     //printf("audio clock: %lf,video clock: %lf\n",get_clock(&is->audio_clk),get_clock(&is->video_clk));
     //printf("video pts: %lf,lu: %lf,curtime: %lf\n ",is->video_clk.pts,is->video_clk.last_updated,av_gettime_relative() / 1000000.0);
@@ -287,10 +294,14 @@ static void video_display(player_stat_t *is)
 
         //printf("displayvideo callback, w=%d, h=%d\n", is->p_vcodec_ctx->width, is->p_vcodec_ctx->height);
         //is->playerController.fpDisplayVideo(is->p_vcodec_ctx->width, is->p_vcodec_ctx->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
-        is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
+        if (is->playerController.fpDisplayVideo)
+            is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
     }
     else if (is->decode_type == HARD_DECODING)
-        is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, vp->frame->data[0], vp->frame->data[1]);
+    {
+        if (is->playerController.fpDisplayVideo)
+            is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, vp->frame->data[0], vp->frame->data[1]);
+    }
 }
 
 /* called to display each frame */
@@ -309,10 +320,13 @@ retry:
     if (frame_queue_nb_remaining(&is->video_frm_queue) <= 0)  // 所有帧已显示
     {    
         // if file is eof and there is no paket in queue, then do complete
-        if (is->video_idx >= 0 && is->eof && is->video_pkt_queue.nb_packets == 0)
+        if (!is->abort_request && is->eof && is->video_pkt_queue.nb_packets == 0)
         {
             //printf("video file has been played completely! packet num : %d.\n", is->video_pkt_queue.nb_packets);
-            is->playerController.fpPlayComplete();
+            //if (is->playerController.fpPlayComplete)
+            //    is->playerController.fpPlayComplete();
+            is->complete = 1;
+            printf("\033[32;2mvideo play complete!\033[0m\n");
         }
         return;
     }

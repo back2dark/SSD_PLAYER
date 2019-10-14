@@ -241,25 +241,28 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
         return -1;
 
     // 若队列头部可读，则由af指向可读帧
-#if 1
+#if 0
     if (!(af = frame_queue_peek_readable(&is->audio_frm_queue)))
         return -1;
 #else
-    while (f->size - f->rindex_shown <= 0) {
-        if (is->video_idx < 0 && is->eof && is->audio_pkt_queue.nb_packets == 0)
+    pthread_mutex_lock(&f->mutex);
+    while (f->size - f->rindex_shown <= 0 && !f->pktq->abort_request) {
+        printf("wait for audio frame\n");
+        if (!is->abort_request && is->eof && is->audio_pkt_queue.nb_packets == 0)
         {
-            is->audio_clock = NAN;
-            is->playerController.fpPlayComplete();
-            return -1;
-        } else {
-            pthread_mutex_lock(&f->mutex);
-            pthread_cond_wait(&f->cond, &f->mutex);
-            pthread_mutex_unlock(&f->mutex);
-        }
-
-        if (f->pktq->abort_request)
-            return -1;
+            //if (is->playerController.fpPlayComplete)
+            //    is->playerController.fpPlayComplete();
+            if (is->video_idx < 0)
+                is->complete = 1;
+            printf("\033[32;2maudio play complete!\033[0m\n");
+        } 
+        pthread_cond_wait(&f->cond, &f->mutex);
     }
+    pthread_mutex_unlock(&f->mutex);
+    
+    if (f->pktq->abort_request)
+        return AVERROR_EOF;
+    
     af = &f->queue[(f->rindex + f->rindex_shown) % f->max_size];
 #endif
     frame_queue_next(&is->audio_frm_queue);
@@ -411,14 +414,17 @@ static void* audio_playing_thread(void *arg)
         int64_t audio_callback_time = av_gettime_relative();
 
         audio_size = audio_resample(is, audio_callback_time);
-        if (audio_size < 0)
+        if (audio_size == AVERROR_EOF)
+            break;
+        else if (audio_size < 0)
         {
             /* if error, just output silence */
             pause = 1;
             if(pause != last_pause)
             {
                 last_pause = pause;
-                is->playerController.fpPauseAudio();
+                if (is->playerController.fpPauseAudio)
+                    is->playerController.fpPauseAudio();
             }
             is->p_audio_frm = NULL;
             is->audio_frm_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_param_tgt.frame_size * is->audio_param_tgt.frame_size;
@@ -429,7 +435,8 @@ static void* audio_playing_thread(void *arg)
             if(pause != last_pause)
             {
                 last_pause = pause;
-                is->playerController.fpResumeAudio();
+                if (is->playerController.fpResumeAudio)
+                    is->playerController.fpResumeAudio();
             }
             is->audio_frm_size = audio_size;
         }
@@ -437,7 +444,8 @@ static void* audio_playing_thread(void *arg)
         if (is->p_audio_frm != NULL)
         {
             long long duration = (is->p_fmt_ctx->duration + (is->p_fmt_ctx->duration <= INT64_MAX - 5000 ? 5000 : 0)) / AV_TIME_BASE;
-            is->playerController.fpPlayAudio(is->p_audio_frm, is->audio_frm_size);
+            if (is->playerController.fpPlayAudio)
+                is->playerController.fpPlayAudio(is->p_audio_frm, is->audio_frm_size);
             //is->playerController.fpGetCurrentPlayPos((MI_S32)duration, /*video_pts*/0);
 
             //is->playerController.fpPlayComplete();      // 需要判断音频和视频都已播放结束，再停止播放。

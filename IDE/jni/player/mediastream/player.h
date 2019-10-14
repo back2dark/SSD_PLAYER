@@ -191,7 +191,7 @@ typedef struct {
     int last_paused;
     int read_pause_return;
     int step;
-    int eof;
+    int eof, complete;
     int seek_req;
     int seek_flags;
     int av_sync_type;
@@ -204,7 +204,8 @@ typedef struct {
     long long curPos;
 
     pthread_cond_t continue_read_thread;
-    pthread_t read_tid;           // demux解复用线程
+    pthread_t read_tid;         //demux解复用线程
+    pthread_t idle_tid;         //空闲线程用于处理特殊事件
 
     pthread_t audioDecode_tid;  //audio解码线程
     pthread_t audioPlay_tid;    //audio播放线程

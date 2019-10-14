@@ -52,7 +52,8 @@ static int demux_init(player_stat_t *is)
 
     // get media duration
     printf("probesize is %lld, duration is %lld ms, start_time is %lld\n", is->p_fmt_ctx->probesize, is->p_fmt_ctx->duration, is->p_fmt_ctx->start_time);
-    is->playerController.fpGetDuration(is->p_fmt_ctx->duration);
+    if (is->playerController.fpGetDuration)
+        is->playerController.fpGetDuration(is->p_fmt_ctx->duration);
 
     // 2. 查找第一个音频流/视频流
     a_idx = -1;
@@ -151,7 +152,7 @@ static void* demux_thread(void *arg)
     }
 
     is->eof = 0;
-
+    is->complete = 0;
     // 4. 解复用处理
     while (1)
     {

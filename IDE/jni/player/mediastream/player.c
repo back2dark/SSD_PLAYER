@@ -125,65 +125,6 @@ static void sync_play_clock_to_slave(play_clock_t *c, play_clock_t *slave)
         set_clock(c, slave_clock, slave->serial);
 }
 
-player_stat_t *player_init(const char *p_input_file)
-{
-    player_stat_t *is;
-
-    is = (player_stat_t *)av_mallocz(sizeof(player_stat_t));
-    if (!is)
-    {
-        return NULL;
-    }
-
-    is->filename = av_strdup(p_input_file);
-    if (is->filename == NULL)
-    {
-        goto fail;
-    }
-
-    /* start video display */
-    if (frame_queue_init(&is->video_frm_queue, &is->video_pkt_queue, VIDEO_PICTURE_QUEUE_SIZE, 1) < 0 ||
-        frame_queue_init(&is->audio_frm_queue, &is->audio_pkt_queue, SAMPLE_QUEUE_SIZE, 1) < 0)
-    {
-        goto fail;
-    }
-
-    if (packet_queue_init(&is->video_pkt_queue) < 0 ||
-        packet_queue_init(&is->audio_pkt_queue) < 0)
-    {
-        goto fail;
-    }
-
-    av_init_packet(&flush_pkt);
-    flush_pkt.data = (uint8_t *)&flush_pkt;
-    
-    packet_queue_put(&is->video_pkt_queue, &flush_pkt);
-    packet_queue_put(&is->audio_pkt_queue, &flush_pkt);
-
-    if (pthread_cond_init(&is->continue_read_thread,NULL) != SUCCESS)
-    {
-        printf("[%s %d]exec function failed\n", __FUNCTION__, __LINE__);
-        return NULL;
-    }
-
-    init_clock(&is->video_clk, &is->video_pkt_queue.serial);
-    init_clock(&is->audio_clk, &is->audio_pkt_queue.serial);
-
-    is->abort_request = 0;
-    is->p_frm_yuv = av_frame_alloc();
-    if (is->p_frm_yuv == NULL)
-    {
-        printf("av_frame_alloc() for p_frm_raw failed\n");
-        return NULL;
-    }
-    is->av_sync_type = av_sync_type;
-    return is;
-fail:
-    player_deinit(is);
-
-    return is;
-}
-
 static void audio_decoder_abort(player_stat_t *is)
 {
     packet_queue_abort(&is->audio_pkt_queue);
@@ -250,6 +191,97 @@ static void stream_component_close(player_stat_t *is, int stream_index)
         break;
     }
 }
+
+static void* idle_thread(void *arg)
+{
+    player_stat_t *is = (player_stat_t *)arg;
+
+    printf("get in idle pthread!\n");
+
+    while(is)
+    {
+        if(is->abort_request)
+        {
+            break;
+        }
+
+        av_usleep((unsigned)(50 * 1000));   //阻塞50ms
+
+        if (is->complete)
+        {
+            if (is->playerController.fpPlayComplete)
+                is->playerController.fpPlayComplete();
+            break;
+        }
+    }
+    
+    printf("idle pthread exit\n");
+
+    return NULL;
+}
+
+player_stat_t *player_init(const char *p_input_file)
+{
+    player_stat_t *is;
+
+    is = (player_stat_t *)av_mallocz(sizeof(player_stat_t));
+    if (!is)
+    {
+        return NULL;
+    }
+
+    is->filename = av_strdup(p_input_file);
+    if (is->filename == NULL)
+    {
+        goto fail;
+    }
+
+    /* start video display */
+    if (frame_queue_init(&is->video_frm_queue, &is->video_pkt_queue, VIDEO_PICTURE_QUEUE_SIZE, 1) < 0 ||
+        frame_queue_init(&is->audio_frm_queue, &is->audio_pkt_queue, SAMPLE_QUEUE_SIZE, 1) < 0)
+    {
+        goto fail;
+    }
+
+    if (packet_queue_init(&is->video_pkt_queue) < 0 ||
+        packet_queue_init(&is->audio_pkt_queue) < 0)
+    {
+        goto fail;
+    }
+
+    av_init_packet(&flush_pkt);
+    flush_pkt.data = (uint8_t *)&flush_pkt;
+    
+    packet_queue_put(&is->video_pkt_queue, &flush_pkt);
+    packet_queue_put(&is->audio_pkt_queue, &flush_pkt);
+
+    if (pthread_cond_init(&is->continue_read_thread,NULL) != SUCCESS)
+    {
+        printf("[%s %d]exec function failed\n", __FUNCTION__, __LINE__);
+        return NULL;
+    }
+
+    init_clock(&is->video_clk, &is->video_pkt_queue.serial);
+    init_clock(&is->audio_clk, &is->audio_pkt_queue.serial);
+
+    is->abort_request = 0;
+    is->p_frm_yuv = av_frame_alloc();
+    if (is->p_frm_yuv == NULL)
+    {
+        printf("av_frame_alloc() for p_frm_raw failed\n");
+        return NULL;
+    }
+    is->av_sync_type = av_sync_type;
+
+    pthread_create(&is->idle_tid, NULL, idle_thread, is);
+
+    return is;
+fail:
+    player_deinit(is);
+
+    return is;
+}
+
 
 int player_deinit(player_stat_t *is)
 {
