@@ -90,6 +90,8 @@
 #define MAX_ADJUST_AO_VOLUME    20
 
 #define VOL_ADJUST_FACTOR		2
+#define PROGRESS_UPDATE_TIME_INTERVAL	500000		// 0.5s
+
 
 typedef enum
 {
@@ -468,8 +470,8 @@ MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
 
     if (currentPos > g_duration)
     {
-    	printf("curPos exceed duration, curPos:%lld, duration:%lld\n", currentPos, g_duration);
-    	currentPos = g_duration;
+        printf("curPos exceed duration, curPos:%lld, duration:%lld\n", currentPos, g_duration);
+        currentPos = g_duration;
     }
 
     // update playtime static
@@ -477,12 +479,11 @@ MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
     	curSec = 0;
     else
     {
-    	//long long curTime = (currentPos - g_firstPlayPos) % 1000000;
-    	long long curTime = currentPos % 1000000;
-    	//printf("curTime:%lld, frame_duration:%lld, curPos:%lld, firstPos:%lld\n", curTime, frame_duration, currentPos, g_firstPlayPos);
+        long long pos = currentPos % PROGRESS_UPDATE_TIME_INTERVAL;
+        //printf("pos:%lld, frame_duration:%lld, curPos:%lld, firstPos:%lld\n", pos, frame_duration, currentPos, g_firstPlayPos);
 
-    	if (curTime > frame_duration/2 && curTime <= (1000000 - frame_duration/2))
-    		return 0;
+        if (pos > frame_duration/2 && pos <= (PROGRESS_UPDATE_TIME_INTERVAL - frame_duration/2))
+            return 0;
     }
 
     curSec = currentPos / AV_TIME_BASE;
@@ -496,7 +497,7 @@ MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
     mSeekbar_progressPtr->setProgress(trackPos);
 
     if (g_firstPlayPos < 0)
-    	g_firstPlayPos = currentPos;
+        g_firstPlayPos = currentPos;
 
     return 0;
 }
@@ -528,36 +529,24 @@ MI_S32 DisplayVideo(MI_S32 s32DispWidth, MI_S32 s32DispHeight, void *pYData, voi
 
     if(MI_SUCCESS == MI_SYS_ChnInputPortGetBuf(&pstSysChnPort,&stBufConf,&stBufInfo,&hHandle, -1))
     {
+        int index = 0;
         stBufInfo.stFrameData.eCompressMode = E_MI_SYS_COMPRESS_MODE_NONE;
         stBufInfo.stFrameData.eFieldType = E_MI_SYS_FIELDTYPE_NONE;
         stBufInfo.stFrameData.eTileMode = E_MI_SYS_FRAME_TILE_MODE_NONE;
         stBufInfo.bEndOfStream = FALSE;
 
-        //memcpy(stBufInfo.stFrameData.pVirAddr[0], pYData, s32DispWidth*s32DispHeight);
-        //memcpy(stBufInfo.stFrameData.pVirAddr[1], pUVData, s32DispWidth*s32DispHeight/2);
-		int bufsize, index;
-        bufsize = s32DispWidth * s32DispHeight;
+        for (index = 0; index < stBufInfo.stFrameData.u16Height; index ++)
+        {
+            memcpy(stBufInfo.stFrameData.pVirAddr[0] + index * stBufInfo.stFrameData.u32Stride[0],
+                   pYData + index * stBufInfo.stFrameData.u16Width,
+                   stBufInfo.stFrameData.u16Width);
+        }
 
-        //printf("frame width : %d, height : %d\n", s32DispWidth, s32DispHeight);
-
-    	//向DIVP中填数据时必须按照stride大小填充
-		if (stBufInfo.stFrameData.u32Stride[0] == stBufInfo.stFrameData.u16Width) {
-	        memcpy(stBufInfo.stFrameData.pVirAddr[0], pYData , bufsize);
-	        memcpy(stBufInfo.stFrameData.pVirAddr[1], pUVData, bufsize / 2);
-		} else {
-            for (index = 0; index < stBufInfo.stFrameData.u16Height; index ++)
-            {
-                memcpy(stBufInfo.stFrameData.pVirAddr[0] + index * stBufInfo.stFrameData.u32Stride[0], 
-					   pYData + index * stBufInfo.stFrameData.u16Width, 
-					   stBufInfo.stFrameData.u16Width);
-            }
-
-			for (index = 0; index < stBufInfo.stFrameData.u16Height / 2; index ++)
-			{
-                memcpy(stBufInfo.stFrameData.pVirAddr[1] + index * stBufInfo.stFrameData.u32Stride[1], 
-					   pUVData + index * stBufInfo.stFrameData.u16Width, 
-					   stBufInfo.stFrameData.u16Width);				    
-			}
+		for (index = 0; index < stBufInfo.stFrameData.u16Height / 2; index ++)
+		{
+			memcpy(stBufInfo.stFrameData.pVirAddr[1] + index * stBufInfo.stFrameData.u32Stride[1],
+				   pUVData + index * stBufInfo.stFrameData.u16Width,
+				   stBufInfo.stFrameData.u16Width);
 		}
 
         MI_SYS_ChnInputPortPutBuf(hHandle ,&stBufInfo , FALSE);
@@ -632,7 +621,6 @@ MI_S32 PlayComplete()
 
 	// reset pts
 	g_firstPlayPos = PLAY_INIT_POS;
-	//g_lastPos = PLAY_INIT_POS;
 
 	EASYUICONTEXT->goBack();
     return 0;

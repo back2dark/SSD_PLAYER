@@ -444,12 +444,9 @@ static void* audio_playing_thread(void *arg)
         if (is->p_audio_frm != NULL)
         {
             long long duration = (is->p_fmt_ctx->duration + (is->p_fmt_ctx->duration <= INT64_MAX - 5000 ? 5000 : 0)) / AV_TIME_BASE;
+
             if (is->playerController.fpPlayAudio)
                 is->playerController.fpPlayAudio(is->p_audio_frm, is->audio_frm_size);
-            //is->playerController.fpGetCurrentPlayPos((MI_S32)duration, /*video_pts*/0);
-
-            //is->playerController.fpPlayComplete();      // 需要判断音频和视频都已播放结束，再停止播放。
-            //frame_queue_next(&is->audio_frm_queue);
         }
 
         // is->audio_write_buf_size是本帧中尚未拷入SDL音频缓冲区的数据量
@@ -471,10 +468,12 @@ static void* audio_playing_thread(void *arg)
             if (is->playerController.fpGetCurrentPlayPosFromAudio)
             {
                 long long audioPts = (long long)(is->audio_clk.pts * 1000000LL);
-                long long frame_duration = 1000000 / AUDIO_INPUT_SAMPRATE;
-                //printf("audio pt:%f, audio drift_pts:%f, duration:%lld, frame_duration:%lld", is->audio_clk.pts, is->audio_clk.pts_drift, is->p_fmt_ctx->duration, frame_duration);
-                //is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, is->p_fmt_ctx->duration, frame_duration);
-                is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, frame_duration);
+                long long frame_duration = 1000000 / (AUDIO_INPUT_SAMPRATE * av_get_bytes_per_sample(is->audio_param_tgt.fmt) / is->audio_frm_size);
+
+                if (is->playerController.fpGetCurrentPlayPosFromAudio)
+                    is->playerController.fpGetCurrentPlayPosFromAudio(audioPts, frame_duration);
+
+                //printf("audio pos info: pts=%lld, frame_duration=%lld\n", audioPts, frame_duration);
             }
         }
     }

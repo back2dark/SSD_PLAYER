@@ -97,15 +97,27 @@ static int demux_init(player_stat_t *is)
     printf("total time of file : %f\n", totle_seconds);
 
     if (is->audio_idx >= 0)
+    {
         is->p_audio_stream = p_fmt_ctx->streams[a_idx];
+        //printf("audio duration:%lld, nb_frames:%lld\n", is->p_audio_stream->duration, is->p_audio_stream->nb_frames);
+    }
     if (is->video_idx >= 0)
+    {
         is->p_video_stream = p_fmt_ctx->streams[v_idx];
+        //printf("video duration:%lld, nb_frames:%lld\n", is->p_video_stream->duration, is->p_video_stream->nb_frames);
+    }
 
     // set GetCurPlayPos callback
     if (is->video_idx >= 0)
+    {
         is->playerController.fpGetCurrentPlayPosFromVideo = is->playerController.fpGetCurrentPlayPos;
+        printf("get play pos from video stream\n");
+    }
     else
+    {
         is->playerController.fpGetCurrentPlayPosFromAudio = is->playerController.fpGetCurrentPlayPos;
+        printf("get play pos from audio stream\n");
+    }
 
     return 0;
 }
