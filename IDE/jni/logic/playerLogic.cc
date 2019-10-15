@@ -161,6 +161,9 @@ void ShowToolbar(bool bShow)
 	mButton_stopPtr->setVisible(bShow);
 	mButton_playPtr->setVisible(bShow);
 	mSeekbar_progressPtr->setVisible(bShow);
+	mTextview_fileNamePtr->setVisible(bShow);
+	mTextview_volumePtr->setVisible(bShow);
+	mTextview_volTitlePtr->setVisible(bShow);
 }
 
 class ToolbarHideThread : public Thread {
@@ -220,13 +223,24 @@ void SetMuteStatus(bool bMute)
 
 int SetPlayerVolumn(int vol)
 {
+	char volInfo[8];
+
+	memset(volInfo, 0, sizeof(volInfo));
+	sprintf(volInfo, "%d%%", vol);
 	mSeekbar_volumnPtr->setProgress(vol);
+	mTextview_volumePtr->setText(volInfo);
 	return 0;
 }
 
 int GetPlayerVolumn()
 {
-	return mSeekbar_volumnPtr->getProgress();
+	int vol = mSeekbar_volumnPtr->getProgress();
+	char volInfo[8];
+
+	memset(volInfo, 0, sizeof(volInfo));
+	sprintf(volInfo, "%d%%", vol);
+	mTextview_volumePtr->setText(volInfo);
+	return vol;
 }
 
 MI_S32 CreatePlayerDev()
@@ -666,6 +680,9 @@ static void SetPlayerControlCallBack(player_stat_t *is)
 static void AdjustVolumeByTouch(int startPos, int endPos)
 {
 	int progress = mSeekbar_volumnPtr->getProgress();
+	char volInfo[8];
+
+	memset(volInfo, 0, sizeof(volInfo));
 	// move up, vol++; move down, vol--
 	progress -= (endPos - startPos) / VOL_ADJUST_FACTOR;
 
@@ -673,6 +690,8 @@ static void AdjustVolumeByTouch(int startPos, int endPos)
 	progress = (progress < 0)? 0 : progress;
 	mSeekbar_volumnPtr->setProgress(progress);
 
+	sprintf(volInfo, "%d%%", progress);
+	mTextview_volumePtr->setText(volInfo);
 	printf("set progress: %d\n", progress);
 }
 
@@ -745,6 +764,14 @@ static void onUI_intent(const Intent *intentPtr) {
 		open_audio(g_pstPlayStat);
 		SetPlayingStatus(true);
 		SetPlayerVolumn(20);
+
+		char filePath[256];
+		char *p = NULL;
+		memset(filePath, 0, sizeof(filePath));
+		strcpy(filePath, fileName.c_str());
+		p = strrchr(filePath, '/');
+		*p = 0;
+		mTextview_fileNamePtr->setText(fileName.c_str()+strlen(filePath)+1);
 
 		AutoDisplayToolbar();
 #endif

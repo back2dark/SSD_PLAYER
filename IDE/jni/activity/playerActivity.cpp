@@ -4,6 +4,9 @@
 #include "playerActivity.h"
 
 /*TAG:GlobalVariable全局变量*/
+static ZKTextView* mTextview_volTitlePtr;
+static ZKTextView* mTextview_volumePtr;
+static ZKTextView* mTextview_fileNamePtr;
 static ZKVideoView* mVideoview_videoPtr;
 static ZKSeekBar* mSeekbar_volumnPtr;
 static ZKTextView* mTextview_slashPtr;
@@ -158,6 +161,9 @@ const char* playerActivity::getAppName() const{
 //TAG:onCreate
 void playerActivity::onCreate() {
 	Activity::onCreate();
+    mTextview_volTitlePtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_volTitle);
+    mTextview_volumePtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_volume);
+    mTextview_fileNamePtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_fileName);
     mVideoview_videoPtr = (ZKVideoView*)findControlByID(ID_PLAYER_Videoview_video);if(mVideoview_videoPtr!= NULL){mVideoview_videoPtr->setVideoPlayerMessageListener(this);}
     mSeekbar_volumnPtr = (ZKSeekBar*)findControlByID(ID_PLAYER_Seekbar_volumn);if(mSeekbar_volumnPtr!= NULL){mSeekbar_volumnPtr->setSeekBarChangeListener(this);}
     mTextview_slashPtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_slash);
