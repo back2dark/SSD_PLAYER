@@ -26,8 +26,6 @@
 #include "window/ZKSlideWindow.h"
 
 /*TAG:Macro宏ID*/
-#define ID_PLAYLIST_Textview1_warning    50005
-#define ID_PLAYLIST_Window1_warning    110001
 #define ID_PLAYLIST_Textview_tips    50004
 #define ID_PLAYLIST_Button_updir    20006
 #define ID_PLAYLIST_Textview_playlist_title    50003

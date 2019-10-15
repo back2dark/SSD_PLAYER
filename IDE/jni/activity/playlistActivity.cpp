@@ -4,8 +4,6 @@
 #include "playlistActivity.h"
 
 /*TAG:GlobalVariable全局变量*/
-static ZKTextView* mTextview1_warningPtr;
-static ZKWindow* mWindow1_warningPtr;
 static ZKTextView* mTextview_tipsPtr;
 static ZKButton* mButton_updirPtr;
 static ZKTextView* mTextview_playlist_titlePtr;
@@ -133,8 +131,6 @@ const char* playlistActivity::getAppName() const{
 //TAG:onCreate
 void playlistActivity::onCreate() {
 	Activity::onCreate();
-    mTextview1_warningPtr = (ZKTextView*)findControlByID(ID_PLAYLIST_Textview1_warning);
-    mWindow1_warningPtr = (ZKWindow*)findControlByID(ID_PLAYLIST_Window1_warning);
     mTextview_tipsPtr = (ZKTextView*)findControlByID(ID_PLAYLIST_Textview_tips);
     mButton_updirPtr = (ZKButton*)findControlByID(ID_PLAYLIST_Button_updir);
     mTextview_playlist_titlePtr = (ZKTextView*)findControlByID(ID_PLAYLIST_Textview_playlist_title);

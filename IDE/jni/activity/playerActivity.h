@@ -26,7 +26,6 @@
 #include "window/ZKSlideWindow.h"
 
 /*TAG:Macro宏ID*/
-#define ID_PLAYER_Textview_unsupport    50007
 #define ID_PLAYER_Videoview_video    95001
 #define ID_PLAYER_Seekbar_volumn    91002
 #define ID_PLAYER_Textview_slash    50005

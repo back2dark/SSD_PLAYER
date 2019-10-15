@@ -293,7 +293,6 @@ static void video_display(player_stat_t *is)
                   );
 
         //printf("displayvideo callback, w=%d, h=%d\n", is->p_vcodec_ctx->width, is->p_vcodec_ctx->height);
-        //is->playerController.fpDisplayVideo(is->p_vcodec_ctx->width, is->p_vcodec_ctx->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
         if (is->playerController.fpDisplayVideo)
             is->playerController.fpDisplayVideo(vp->frame->width, vp->frame->height, is->p_frm_yuv->data[0], is->p_frm_yuv->data[1]);
     }
@@ -588,7 +587,6 @@ int open_video(player_stat_t *is)
     if (is && is->video_idx >= 0)
     {
         open_video_stream(is);
-
         open_video_playing(is);
     }
 

@@ -51,7 +51,7 @@ static int get_master_sync_type(player_stat_t *is) {
 
 
 /* get the current master clock value */
-double get_master_clock(player_stat_t *is)
+static double get_master_clock(player_stat_t *is)
 {
     double val;
 

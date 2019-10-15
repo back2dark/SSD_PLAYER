@@ -187,7 +187,7 @@ private:
 static ToolbarHideThread g_hideToolbarThread;
 
 // auto hide toolbar after displaying 5s
-void AudoDisplayToolbar()
+void AutoDisplayToolbar()
 {
 	if (!g_hideToolbarThread.isRunning())
 	{
@@ -465,7 +465,6 @@ MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
     char curTime[32];
     long long curSec = 0;
     int trackPos = 0;
-    long long curTimee = currentPos % 1000000;
 
     if (currentPos > g_duration)
     {
@@ -479,18 +478,14 @@ MI_S32 GetCurrentPlayPos(long long currentPos, long long frame_duration)
     else
     {
     	//long long curTime = (currentPos - g_firstPlayPos) % 1000000;
-    	//long long curTime = currentPos % 1000000;
+    	long long curTime = currentPos % 1000000;
     	//printf("curTime:%lld, frame_duration:%lld, curPos:%lld, firstPos:%lld\n", curTime, frame_duration, currentPos, g_firstPlayPos);
 
-    	if (curTimee > frame_duration/3*2 && curTimee <= (1000000 - frame_duration/3*2))
+    	if (curTime > frame_duration/2 && curTime <= (1000000 - frame_duration/2))
     		return 0;
     }
 
     curSec = currentPos / AV_TIME_BASE;
-    if(curTimee > (1000000 - frame_duration/3*2))
-        	{
-        		curSec += 1;
-        	}
 
     memset(curTime, 0, sizeof(curTime));
     sprintf(curTime, "%02lld:%02lld:%02lld", curSec/3600, (curSec%3600)/60, curSec%60);
@@ -664,10 +659,7 @@ MI_S32 PlayError()
 
     return 0;
 }
-void UnsupportType(bool bunsupp)
-{
-	mTextview_unsupportPtr->setVisible(bunsupp);
-}
+
 static void SetPlayerControlCallBack(player_stat_t *is)
 {
 	is->playerController.fpGetMediaInfo = GetMediaInfo;
@@ -758,20 +750,15 @@ static void onUI_intent(const Intent *intentPtr) {
 
 		SetPlayerControlCallBack(g_pstPlayStat);
 		printf("open_demux\n");
-		//open_demux(g_pstPlayStat);
-		if(!open_demux(g_pstPlayStat))
-				{
-					printf("open_video\n");
-					open_video(g_pstPlayStat);
-					printf("open_audio\n");
-					open_audio(g_pstPlayStat);
-					SetPlayingStatus(true);
-					SetPlayerVolumn(20);
-				}
-				else
-					UnsupportType(true);
+		open_demux(g_pstPlayStat);
+		printf("open_video\n");
+		open_video(g_pstPlayStat);
+		printf("open_audio\n");
+		open_audio(g_pstPlayStat);
+		SetPlayingStatus(true);
+		SetPlayerVolumn(20);
 
-		AudoDisplayToolbar();
+		AutoDisplayToolbar();
 #endif
     }
 }
@@ -853,7 +840,7 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 			bValidMove = false;
 
 			// show play bar when touch down
-			AudoDisplayToolbar();
+			AutoDisplayToolbar();
 
 			break;
 		case MotionEvent::E_ACTION_MOVE://触摸滑动
@@ -913,7 +900,7 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 				lastMove = touchMove;
 			}
 
-			AudoDisplayToolbar();
+			AutoDisplayToolbar();
 			break;
 		case MotionEvent::E_ACTION_UP:  //触摸抬起
 			//printf("up: time=%ld, x=%d, y=%d\n", ev.mEventTime, ev.mX, ev.mY);
@@ -974,24 +961,16 @@ static bool onButtonClick_Button_stop(ZKButton *pButton) {
 	g_bPause = FALSE;
 
 	// sendmessage to stop playing
-	if(mTextview_unsupportPtr->isVisible())
-		{
-			StopPlayAudio();
-			EASYUICONTEXT->goBack();
-		}
-		else
-		{
-			player_deinit(g_pstPlayStat);
-			StopPlayAudio();
-			StopPlayVideo();
+	player_deinit(g_pstPlayStat);
+	StopPlayAudio();
+	StopPlayVideo();
 
-			SetPlayingStatus(false);
-			ResetSpeedMode();
-			mTextview_speedPtr->setText("");
-			g_bShowPlayToolBar = FALSE;
+	SetPlayingStatus(false);
+	ResetSpeedMode();
+	mTextview_speedPtr->setText("");
+	g_bShowPlayToolBar = FALSE;
 
-			EASYUICONTEXT->goBack();
-		}
+	EASYUICONTEXT->goBack();
 #endif
     return false;
 }

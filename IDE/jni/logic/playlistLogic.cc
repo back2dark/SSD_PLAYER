@@ -130,7 +130,6 @@ static char *g_pFileFilter[FILE_FILTER_NUM] = {
 		".tp"
 };
 
-
 char *getDayOfWeek(int day)
 {
     switch (day)
@@ -725,10 +724,7 @@ static void onListItemClick_Listview_playlist(ZKListView *pListView, int index, 
 		// enter to player
 		Intent* intent = new Intent();
 		intent->putExtra("filepath", g_selectPath);
-
 		EASYUICONTEXT->openActivity("playerActivity", intent);
-
-
 	}
 #endif
 }

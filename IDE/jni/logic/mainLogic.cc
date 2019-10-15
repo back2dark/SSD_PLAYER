@@ -193,5 +193,4 @@ static void onSlideItemClick_Slidewindow1(ZKSlideWindow *pSlideWindow, int index
 #endif
 
 	EASYUICONTEXT->openActivity(IconTab[index]);
-	EASYUICONTEXT->closeActivity("mainActivity");
 }
