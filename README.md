@@ -4,6 +4,7 @@ Ssplaer base on SSD UI
 IDE:
 	基于ZK UI播放器的IDE。
 	编译方法：
+	
 	1.使用FlyThings IDE导入IDE工程；
 	2.选中项目，点击右键选择清空项目，构建项目；
 	3.customer_player.tar.gz和customer_without_player.tar.gz是程序的运行环境：
