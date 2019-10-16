@@ -4,6 +4,11 @@
 #include "playerActivity.h"
 
 /*TAG:GlobalVariable全局变量*/
+static ZKWindow* mWindow_mediaInfoPtr;
+static ZKWindow* mWindow_playBarPtr;
+static ZKButton* mButton_confirmPtr;
+static ZKTextView* mTextview_msgPtr;
+static ZKWindow* mWindow_errMsgPtr;
 static ZKTextView* mTextview_volTitlePtr;
 static ZKTextView* mTextview_volumePtr;
 static ZKTextView* mTextview_fileNamePtr;
@@ -20,7 +25,6 @@ static ZKButton* mButton_slowPtr;
 static ZKButton* mButton_stopPtr;
 static ZKButton* mButton_playPtr;
 static ZKSeekBar* mSeekbar_progressPtr;
-static ZKTextView* mTextview_playBarPtr;
 static playerActivity* mActivityPtr;
 
 /*register activity*/
@@ -58,6 +62,7 @@ typedef struct {
 
 /*TAG:ButtonCallbackTab按键映射表*/
 static S_ButtonCallback sButtonCallbackTab[] = {
+    ID_PLAYER_Button_confirm, onButtonClick_Button_confirm,
     ID_PLAYER_Button_voice, onButtonClick_Button_voice,
     ID_PLAYER_Button_fast, onButtonClick_Button_fast,
     ID_PLAYER_Button_slow, onButtonClick_Button_slow,
@@ -161,6 +166,11 @@ const char* playerActivity::getAppName() const{
 //TAG:onCreate
 void playerActivity::onCreate() {
 	Activity::onCreate();
+    mWindow_mediaInfoPtr = (ZKWindow*)findControlByID(ID_PLAYER_Window_mediaInfo);
+    mWindow_playBarPtr = (ZKWindow*)findControlByID(ID_PLAYER_Window_playBar);
+    mButton_confirmPtr = (ZKButton*)findControlByID(ID_PLAYER_Button_confirm);
+    mTextview_msgPtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_msg);
+    mWindow_errMsgPtr = (ZKWindow*)findControlByID(ID_PLAYER_Window_errMsg);
     mTextview_volTitlePtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_volTitle);
     mTextview_volumePtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_volume);
     mTextview_fileNamePtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_fileName);
@@ -177,7 +187,6 @@ void playerActivity::onCreate() {
     mButton_stopPtr = (ZKButton*)findControlByID(ID_PLAYER_Button_stop);
     mButton_playPtr = (ZKButton*)findControlByID(ID_PLAYER_Button_play);
     mSeekbar_progressPtr = (ZKSeekBar*)findControlByID(ID_PLAYER_Seekbar_progress);if(mSeekbar_progressPtr!= NULL){mSeekbar_progressPtr->setSeekBarChangeListener(this);}
-    mTextview_playBarPtr = (ZKTextView*)findControlByID(ID_PLAYER_Textview_playBar);
 	mActivityPtr = this;
 	onUI_init();
     registerProtocolDataUpdateListener(onProtocolDataUpdate); 

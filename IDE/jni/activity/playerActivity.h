@@ -26,6 +26,11 @@
 #include "window/ZKSlideWindow.h"
 
 /*TAG:Macro宏ID*/
+#define ID_PLAYER_Window_mediaInfo    110003
+#define ID_PLAYER_Window_playBar    110002
+#define ID_PLAYER_Button_confirm    20006
+#define ID_PLAYER_Textview_msg    50010
+#define ID_PLAYER_Window_errMsg    110001
 #define ID_PLAYER_Textview_volTitle    50009
 #define ID_PLAYER_Textview_volume    50008
 #define ID_PLAYER_Textview_fileName    50007
@@ -42,7 +47,6 @@
 #define ID_PLAYER_Button_stop    20002
 #define ID_PLAYER_Button_play    20001
 #define ID_PLAYER_Seekbar_progress    91001
-#define ID_PLAYER_Textview_playBar    50001
 /*TAG:Macro宏ID END*/
 
 class playerActivity : public Activity, 

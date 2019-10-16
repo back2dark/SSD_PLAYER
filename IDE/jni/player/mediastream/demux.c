@@ -99,16 +99,18 @@ static int demux_init(player_stat_t *is)
     if (is->audio_idx >= 0)
     {
         is->p_audio_stream = p_fmt_ctx->streams[a_idx];
+        printf("audio codec_info_nb_frames:%d, nb_frames:%lld, probe_packet:%d\n", is->p_audio_stream->codec_info_nb_frames, is->p_audio_stream->nb_frames, is->p_audio_stream->probe_packets);
         //printf("audio duration:%lld, nb_frames:%lld\n", is->p_audio_stream->duration, is->p_audio_stream->nb_frames);
     }
     if (is->video_idx >= 0)
     {
         is->p_video_stream = p_fmt_ctx->streams[v_idx];
+        printf("video codec_info_nbframes:%d, nb_frames:%lld, probe_packet:%d\n", is->p_video_stream->codec_info_nb_frames, is->p_video_stream->nb_frames, is->p_video_stream->probe_packets);
         //printf("video duration:%lld, nb_frames:%lld\n", is->p_video_stream->duration, is->p_video_stream->nb_frames);
     }
 
     // set GetCurPlayPos callback
-    if (is->video_idx >= 0)
+    if (is->video_idx >= 0 && is->p_video_stream->codec_info_nb_frames > 1)
     {
         is->playerController.fpGetCurrentPlayPosFromVideo = is->playerController.fpGetCurrentPlayPos;
         printf("get play pos from video stream\n");

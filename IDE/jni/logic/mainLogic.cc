@@ -174,6 +174,7 @@ const char* IconTab[]={
 		"painterActivity",
 		"networkSettingActivity",
 		"playlistActivity",
+		"cameraActivity",
 };
 
 static void onSlideItemClick_Slidewindow1(ZKSlideWindow *pSlideWindow, int index) {

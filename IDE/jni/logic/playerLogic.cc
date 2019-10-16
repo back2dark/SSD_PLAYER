@@ -121,7 +121,7 @@ static bool g_bShowPlayToolBar = FALSE;          // select file list page or pla
 static bool g_bPlaying = FALSE;
 static bool g_bPause = FALSE;
 static bool g_bMute = FALSE;
-static int g_s32VolValue = 0;
+static int g_s32VolValue = 20;
 static bool g_ePlayDirection = E_PLAY_FORWARD;
 static PlayMode_e g_ePlayMode = E_PLAY_NORMAL_MODE;
 static PlaySpeedMode_e g_eSpeedMode = E_NORMAL_SPEED;
@@ -150,20 +150,8 @@ static long long g_duration = 0;
 
 void ShowToolbar(bool bShow)
 {
-	mSeekbar_volumnPtr->setVisible(bShow);
-	mTextview_slashPtr->setVisible(bShow);
-	mTextview_durationPtr->setVisible(bShow);
-	mTextview_curtimePtr->setVisible(bShow);
-	mTextview_speedPtr->setVisible(bShow);
-	mButton_voicePtr->setVisible(bShow);
-	mButton_fastPtr->setVisible(bShow);
-	mButton_slowPtr->setVisible(bShow);
-	mButton_stopPtr->setVisible(bShow);
-	mButton_playPtr->setVisible(bShow);
-	mSeekbar_progressPtr->setVisible(bShow);
-	mTextview_fileNamePtr->setVisible(bShow);
-	mTextview_volumePtr->setVisible(bShow);
-	mTextview_volTitlePtr->setVisible(bShow);
+	mWindow_playBarPtr->setVisible(bShow);
+	mWindow_mediaInfoPtr->setVisible(bShow);
 }
 
 class ToolbarHideThread : public Thread {
@@ -421,9 +409,15 @@ MI_S32 StartPlayAudio()
 
 
     /* if test AO Volume */
-    s32SetVolumeDb = g_s32VolValue * (MAX_ADJUST_AO_VOLUME-MIN_ADJUST_AO_VOLUME) / 100 + MIN_ADJUST_AO_VOLUME;
+    if (g_s32VolValue)
+    	s32SetVolumeDb = g_s32VolValue * (MAX_ADJUST_AO_VOLUME-MIN_ADJUST_AO_VOLUME) / 100 + MIN_ADJUST_AO_VOLUME;
+    else
+    	s32SetVolumeDb = MIN_AO_VOLUME;
+
     MI_AO_SetVolume(AoDevId, s32SetVolumeDb);
     MI_AO_SetMute(AoDevId, g_bMute);
+    SetMuteStatus(g_bMute);
+
     /* get AO volume */
     MI_AO_GetVolume(AoDevId, &s32GetVolumeDb);
 
@@ -643,6 +637,9 @@ MI_S32 PlayComplete()
 // stay in playing page , clear play status,
 MI_S32 PlayError()
 {
+	mTextview_msgPtr->setText("error occur");
+	mWindow_errMsgPtr->setVisible(true);
+
     // stop play video & audio
     g_bPlaying = FALSE;
     g_bPause = FALSE;
@@ -657,7 +654,7 @@ MI_S32 PlayError()
 	mTextview_speedPtr->setText("");
 	g_bShowPlayToolBar = FALSE;
 
-	EASYUICONTEXT->goBack();
+//	EASYUICONTEXT->goBack();
 
     return 0;
 }
@@ -735,6 +732,8 @@ static void onUI_intent(const Intent *intentPtr) {
     if (intentPtr != NULL) {
 #ifdef SUPPORT_PLAYER_MODULE
     	fileName = intentPtr->getExtra("filepath");
+
+    	mWindow_errMsgPtr->setVisible(false);
     	// init player
     	ResetSpeedMode();
     	StartPlayVideo();
@@ -763,7 +762,7 @@ static void onUI_intent(const Intent *intentPtr) {
 		printf("open_audio\n");
 		open_audio(g_pstPlayStat);
 		SetPlayingStatus(true);
-		SetPlayerVolumn(20);
+		SetPlayerVolumn(g_s32VolValue);
 
 		char filePath[256];
 		char *p = NULL;
@@ -853,6 +852,12 @@ static bool onplayerActivityTouchEvent(const MotionEvent &ev) {
 			touchDown.x = ev.mX;
 			touchDown.y = ev.mY;
 			bValidMove = false;
+
+			// judge if the model window is visible
+			if (mWindow_errMsgPtr->isVisible() && !mWindow_errMsgPtr->getPosition().isHit(ev.mX, ev.mY))
+			{
+				return true;
+			}
 
 			// show play bar when touch down
 			AutoDisplayToolbar();
@@ -1177,4 +1182,10 @@ static void onProgressChanged_Seekbar_volumn(ZKSeekBar *pSeekBar, int progress) 
 		MI_AO_SetMute(AUDIO_DEV, g_bMute);
 	}
 #endif
+}
+static bool onButtonClick_Button_confirm(ZKButton *pButton) {
+    //LOGD(" ButtonClick Button_confirm !!!\n");
+	mWindow_errMsgPtr->setVisible(false);
+	EASYUICONTEXT->goBack();
+    return false;
 }
