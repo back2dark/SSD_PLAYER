@@ -5,7 +5,6 @@ IDE:
 
 	基于ZK UI播放器的IDE。
 	编译方法：
-	
 	1.使用FlyThings IDE导入IDE工程；
 	2.选中项目，点击右键选择清空项目，构建项目；
 	3.customer_player.tar.gz和customer_without_player.tar.gz是程序的运行环境：
@@ -18,9 +17,9 @@ app:
 
 	用来点屏的app，它会call到IDE中编译出来的so
 	编译方法：
-		1.根据需要点的panel修改sstardisp.c打开对应的配置：
-			#define UI_1024_600 1
-		2.make clean;make即可
+	1.根据需要点的panel修改sstardisp.c打开对应的配置：
+	  #define UI_1024_600 1
+	2.make clean;make即可
 		
 customer_zk:
 
@@ -35,6 +34,7 @@ tool:
 	echo 800x480.bin > /sys/bus/i2c/devices/1-005d/gtcfg
 
 运行播放器：
+
 	1.将app编译出来的zkgui copy到customer分区；
 	2.将customer_zk的res和lib copy到customer分区；
 	3.将customer_zk的etc下面的文件拷贝到板子/etc下面；
