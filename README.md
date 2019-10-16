@@ -2,6 +2,7 @@
 Ssplaer base on SSD UI
 
 IDE:
+
 	基于ZK UI播放器的IDE。
 	编译方法：
 	
@@ -14,6 +15,7 @@ IDE:
 	  如果有修改UI资源相关部分，需要将构建项目后生成的ui文件夹替换到解压后的res目录中。
 		
 app:
+
 	用来点屏的app，它会call到IDE中编译出来的so
 	编译方法：
 		1.根据需要点的panel修改sstardisp.c打开对应的配置：
@@ -21,11 +23,13 @@ app:
 		2.make clean;make即可
 		
 customer_zk:
+
 	拷贝到板子运行app的环境
 	1.将IDE编译好的IDE\libs\armeabi\libzkgui.so替换到customer_zk\lib
 	2.将需要的ffmpeg lib拷贝到customer_zk\lib
 	
 tool:
+
 	用来改变触屏分辨率配置的文件：
 	echo 1024x600.bin > /sys/bus/i2c/devices/1-005d/gtcfg
 	echo 800x480.bin > /sys/bus/i2c/devices/1-005d/gtcfg
