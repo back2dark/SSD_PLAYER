@@ -44,6 +44,8 @@ static int demux_init(player_stat_t *is)
         else
         {
             printf("avformat_open_input() failed %d\n", err);
+            if (is->playerController.fpPlayError)
+                is->playerController.fpPlayError(err);
         }
         ret = -1;
         goto fail;
