@@ -35,7 +35,16 @@ static int demux_init(player_stat_t *is)
     err = avformat_open_input(&p_fmt_ctx, is->filename, NULL, NULL);
     if (err < 0)
     {
-        printf("avformat_open_input() failed %d\n", err);
+        if (err == -101)
+        {
+            printf("error : network is not reachable!\n");
+            if (is->playerController.fpPlayError)
+                is->playerController.fpPlayError(err);
+        }
+        else
+        {
+            printf("avformat_open_input() failed %d\n", err);
+        }
         ret = -1;
         goto fail;
     }
@@ -166,7 +175,8 @@ static void* demux_thread(void *arg)
     }
 
     is->eof = 0;
-    is->complete = 0;
+    is->audio_complete = 0;
+    is->video_complete = 0;
     // 4. 解复用处理
     while (1)
     {

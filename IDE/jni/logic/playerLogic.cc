@@ -635,7 +635,7 @@ MI_S32 PlayComplete()
 }
 
 // stay in playing page , clear play status,
-MI_S32 PlayError()
+MI_S32 PlayError(int error)
 {
 	mTextview_msgPtr->setText("error occur");
 	mWindow_errMsgPtr->setVisible(true);

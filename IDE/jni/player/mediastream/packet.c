@@ -130,7 +130,8 @@ void packet_queue_flush(packet_queue_t *q)
     pthread_mutex_lock(&q->mutex);
     for (pkt = q->first_pkt; pkt; pkt = pkt1) {
         pkt1 = pkt->next;
-        av_packet_unref(&pkt->pkt);
+        //av_packet_unref(&pkt->pkt);
+        av_free_packet(&pkt->pkt);
         av_freep(&pkt);
     }
     q->last_pkt = NULL;

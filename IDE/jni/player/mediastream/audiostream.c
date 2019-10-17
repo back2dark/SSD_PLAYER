@@ -252,8 +252,7 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
         {
             //if (is->playerController.fpPlayComplete)
             //    is->playerController.fpPlayComplete();
-            if (is->video_idx < 0)
-                is->complete = 1;
+            is->audio_complete = 1;
             printf("\033[32;2maudio play complete!\033[0m\n");
         } 
         pthread_cond_wait(&f->cond, &f->mutex);

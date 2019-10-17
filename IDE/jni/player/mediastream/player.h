@@ -145,7 +145,7 @@ typedef struct {
     MI_S32 (*fpPauseAudio)();
     MI_S32 (*fpResumeAudio)();
     MI_S32 (*fpPlayComplete)();
-    MI_S32 (*fpPlayError)();
+    MI_S32 (*fpPlayError)(int error);
 }   player_control_t;
 
 typedef struct {
@@ -191,7 +191,8 @@ typedef struct {
     int last_paused;
     int read_pause_return;
     int step;
-    int eof, complete;
+    int eof;
+    int audio_complete, video_complete;
     int seek_req;
     int seek_flags;
     int av_sync_type;

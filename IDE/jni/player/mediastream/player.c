@@ -207,11 +207,25 @@ static void* idle_thread(void *arg)
 
         av_usleep((unsigned)(50 * 1000));   //阻塞50ms
 
-        if (is->complete)
+        if (is->video_idx >= 0 && is->audio_idx >= 0)
         {
-            if (is->playerController.fpPlayComplete)
-                is->playerController.fpPlayComplete();
-            break;
+            if (is->audio_complete && is->video_complete)
+            {
+                if (is->playerController.fpPlayComplete) {
+                    is->playerController.fpPlayComplete();
+                    break;
+                }
+            }
+        }
+        else
+        {
+            if (is->audio_complete || is->video_complete)
+            {
+                if (is->playerController.fpPlayComplete) {
+                    is->playerController.fpPlayComplete();
+					break;
+                }
+            }
         }
     }
     
