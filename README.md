@@ -21,8 +21,9 @@ app:
 	  #define UI_1024_600 1
 	2.make clean;make即可
 		
-customer_zk:
+customer_player.tar.gz:
 
+	
 	拷贝到板子运行app的环境
 	1.将IDE编译好的IDE\libs\armeabi\libzkgui.so替换到customer_zk\lib
 	2.将需要的ffmpeg lib拷贝到customer_zk\lib
