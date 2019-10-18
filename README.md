@@ -34,7 +34,7 @@ IDE:
 	   CONFIG_CLOUD_PLAY_SWITCH := "enable"
 	   #CONFIG_CLOUD_PLAY_SWITCH :=
 	   
-	   关闭player：
+	   关闭cloud play：
 	   #cloudplay功能启用开关
 	   #CONFIG_CLOUD_PLAY_SWITCH := "enable"
 	   CONFIG_CLOUD_PLAY_SWITCH :=
