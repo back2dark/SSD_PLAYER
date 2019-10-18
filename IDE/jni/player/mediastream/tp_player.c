@@ -1,3 +1,4 @@
+#ifdef SUPPORT_CLOUD_PLAY_MODULE
 #include "tp_player.h"
 #include "player.h"
 #include "frame.h"
@@ -427,3 +428,4 @@ int tp_player_loop(player_stat_t *parg)
 }
 
 
+#endif

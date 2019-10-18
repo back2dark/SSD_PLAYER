@@ -3,9 +3,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "tp_player.h"
-
-static char g_file[50] = "http://122.112.182.239/mp4/test.m3u8";
 /*
 *此文件由GUI工具生成
 *文件功能：用于处理用户的逻辑相应代码
@@ -43,13 +40,21 @@ static char g_file[50] = "http://122.112.182.239/mp4/test.m3u8";
  * 注意：id不能重复
  */
 
+#ifdef SUPPORT_CLOUD_PLAY_MODULE
+#include "tp_player.h"
+
+static char g_file[50] = "http://122.112.182.239/mp4/test.m3u8";
+
 player_control_t g_pstPlayStatt;
 static std::string g_address;
+#endif
 
 static S_ACTIVITY_TIMEER REGISTER_ACTIVITY_TIMER_TAB[] = {
 	//{0,  6000}, //定时器id=0, 时间间隔6秒
 	//{1,  1000},
 };
+
+#ifdef SUPPORT_CLOUD_PLAY_MODULE
 MI_S32 PlayCompletee()
 {
 	tp_player_close();
@@ -81,12 +86,14 @@ static void SetPlayerControlCallBackk(player_control_t *is)
 	is->fpPlayComplete = PlayCompletee;
 	is->fpPlayError = PlayErrorr;
 }
+#endif
 
 /**
  * 当界面构造时触发
  */
 static void onUI_init(){
     //Tips :添加 UI初始化的显示代码到这里,如:mText1Ptr->setText("123");
+#ifdef SUPPORT_CLOUD_PLAY_MODULE
 	printf("hrer  %s!!!\n",g_file);
 	system("echo 12 > /sys/class/gpio/export");
 	system("echo out > /sys/class/gpio/gpio12/direction");
@@ -99,7 +106,7 @@ static void onUI_init(){
 	g_pstPlayStatt.fpPlayComplete = PlayCompletee;
 	//printf("in %p\n",&g_pstPlayStatt.fpPlayError);
 	tp_player_open(g_file, 0, 0, 1024, 600, &g_pstPlayStatt);*/
-
+#endif
 }
 
 /**
@@ -107,6 +114,7 @@ static void onUI_init(){
  */
 static void onUI_intent(const Intent *intentPtr) {
     if (intentPtr != NULL) {
+#ifdef SUPPORT_CLOUD_PLAY_MODULE
     	//mTextview_addressPtr->setText(g_file);
     	//tp_player_open("http://122.112.182.239/mp4/test.m3u8", 0, 0, 1024, 600);
     	g_address = intentPtr->getExtra("address");
@@ -121,6 +129,7 @@ static void onUI_intent(const Intent *intentPtr) {
     	tp_player_open(g_file, 0, 0, 1024, 600, &g_pstPlayStatt);
 
         //TODO
+#endif
     }
 }
 
@@ -196,7 +205,9 @@ static bool onliveActivityTouchEvent(const MotionEvent &ev) {
 }
 static bool onButtonClick_sys_back(ZKButton *pButton) {
     //LOGD(" ButtonClick sys_back !!!\n");
+#ifdef SUPPORT_CLOUD_PLAY_MODULE
 	tp_player_close();
+#endif
     return false;
 }
 static bool onButtonClick_Button1(ZKButton *pButton) {

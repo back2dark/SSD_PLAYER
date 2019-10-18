@@ -97,6 +97,7 @@ static int demux_init(player_stat_t *is)
         {
             avformat_close_input(&p_fmt_ctx);
         }
+
         return ret;
     }
 

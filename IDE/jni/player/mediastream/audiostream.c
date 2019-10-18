@@ -250,8 +250,6 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
         printf("wait for audio frame\n");
         if (!is->abort_request && is->eof && is->audio_pkt_queue.nb_packets == 0)
         {
-            //if (is->playerController.fpPlayComplete)
-            //    is->playerController.fpPlayComplete();
             is->audio_complete = 1;
             printf("\033[32;2maudio play complete!\033[0m\n");
         } 

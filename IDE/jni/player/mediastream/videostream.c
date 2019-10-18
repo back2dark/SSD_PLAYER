@@ -321,9 +321,6 @@ retry:
         // if file is eof and there is no paket in queue, then do complete
         if (!is->abort_request && is->eof && is->video_pkt_queue.nb_packets == 0)
         {
-            //printf("video file has been played completely! packet num : %d.\n", is->video_pkt_queue.nb_packets);
-            //if (is->playerController.fpPlayComplete)
-            //    is->playerController.fpPlayComplete();
             is->video_complete = 1;
             printf("\033[32;2mvideo play complete!\033[0m\n");
         }

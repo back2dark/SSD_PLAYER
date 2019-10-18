@@ -34,6 +34,10 @@ CONFIG_WLAN_SWITCH :=
 CONFIG_PLAYER_SWITCH := "enable"
 #CONFIG_PLAYER_SWITCH :=
 
+#cloudplay功能启用开关
+#CONFIG_CLOUD_PLAY_SWITCH := "enable"
+CONFIG_CLOUD_PLAY_SWITCH :=
+
 OBJS_ROOT_DIR=../obj/
 OBJS_1 = $(patsubst %.cpp,%.o,$(LOCAL_SRC_FILES))
 OBJS_2 = $(patsubst %.c,%.o,$(OBJS_1))
@@ -70,6 +74,11 @@ CXXFLAGS+=-DSUPPORT_PLAYER_MODULE
 
 #INCLUDE_DIR += -I ../jni/player -I ../jni/player/ffmpeg/include -I ../jni/player/mediastream -I ../jni/player/usbdetect
 LDFLAGS += -lavformat -lavcodec -lavutil -lswscale -lswresample -L../jni/player/ffmpeg/lib
+endif
+
+ifneq ($(CONFIG_CLOUD_PLAY_SWITCH),)
+CFLAGS+=-DSUPPORT_CLOUD_PLAY_MODULE
+CXXFLAGS+=-DSUPPORT_CLOUD_PLAY_MODULE
 endif
 
 TARGET=../libs/armeabi/libzkgui.so

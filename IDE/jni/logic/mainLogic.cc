@@ -194,5 +194,12 @@ static void onSlideItemClick_Slidewindow1(ZKSlideWindow *pSlideWindow, int index
 	}
 #endif
 
+#ifndef SUPPORT_CLOUD_PLAY_MODULE
+	if (!strcmp(IconTab[index], "liveinputActivity"))
+	{
+		return;
+	}
+#endif
+
 	EASYUICONTEXT->openActivity(IconTab[index]);
 }

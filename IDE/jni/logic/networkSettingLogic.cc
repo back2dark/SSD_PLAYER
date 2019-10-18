@@ -162,7 +162,7 @@ protected:
 			{
 				nTryCnt = 0;
 			}
-			else	// be freshing or first get no-zero result, do scanning per 5s
+			else	// be refreshing or first get no-zero result, do scanning per 5s
 			{
 				//WIFI_LOG("get scan result, change loadStatus to false\n");
 				isLoading = false;
