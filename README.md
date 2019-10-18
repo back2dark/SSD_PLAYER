@@ -7,7 +7,7 @@ IDE:
 	编译方法：
 	1. 使用FlyThings IDE导入IDE工程；
 	2. 选中项目，点击右键选择清空项目，构建项目；
-	3. 配置是否启用wifi和player功能：
+	3. 配置是否启用wifi，player和cloud play功能：
 	   在jni/Makefile中有设置模块使能宏：
 	   启用wifi：
 	   #wlan功能启用开关
@@ -40,6 +40,7 @@ IDE:
 	   CONFIG_CLOUD_PLAY_SWITCH :=
 	   
 	   注：cloud play功能默认不开启，界面上默认不显示。若需启用此功能，除开启cloud play宏开关外，还需将IDE/ui目录下的main_ftu_with_cloudplay重命名为main.ftu，然后重新编译。
+	       若要使用cloud play功能，必须打开player功能开关。
 	
 	4. 切换AMIC & DMIC
 	   修改 arch/arm/boot/dts/infinity2m-ssc011a-s01a-display.dtsi
