@@ -39,7 +39,7 @@ IDE:
 	   #CONFIG_CLOUD_PLAY_SWITCH := "enable"
 	   CONFIG_CLOUD_PLAY_SWITCH :=
 	   
-	   注：cloud play功能默认不开启，界面上默认不显示。若需使用此功能，出开启cloud play宏开关外还需将IDE/ui目录下的main_ftu_with_cloudplay重命名为main.ftu,然后重新编译。
+	   注：cloud play功能默认不开启，界面上默认不显示。若需启用此功能，除开启cloud play宏开关外，还需将IDE/ui目录下的main_ftu_with_cloudplay重命名为main.ftu，然后重新编译。
 	
 	4. customer_player.tar.gz和customer_without_player.tar.gz是程序的运行环境：
 	   customer_player.tar.gz为开启用播放器功能的运行环境，会依赖于ffmpeg库；
