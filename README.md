@@ -41,7 +41,16 @@ IDE:
 	   
 	   注：cloud play功能默认不开启，界面上默认不显示。若需启用此功能，除开启cloud play宏开关外，还需将IDE/ui目录下的main_ftu_with_cloudplay重命名为main.ftu，然后重新编译。
 	
-	4. customer_player.tar.gz和customer_without_player.tar.gz是程序的运行环境：
+	4. 切换AMIC & DMIC
+	   修改 arch/arm/boot/dts/infinity2m-ssc011a-s01a-display.dtsi
+	   digmic-padmux = <1>;  	// AMIC
+	   digmic-padmux = <2>;    	// DMIC
+	   
+	   修改 jni/voicedetect/voicedetect.cpp
+	   #define USE_AMIC	1	// AMIC
+	   #define USE_AMIC	0	// DMIC
+	
+	5. customer_player.tar.gz和customer_without_player.tar.gz是程序的运行环境：
 	   customer_player.tar.gz为开启用播放器功能的运行环境，会依赖于ffmpeg库；
 	   customer_without_player.tar.gz为关闭播放器功能的运行环境，不依赖于ffmpeg库。
 	   根据配置情况解压对应的包即可。
