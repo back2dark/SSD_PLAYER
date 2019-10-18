@@ -22,6 +22,8 @@
 #include "char_conversion.h"
 
 
+#define USE_AMIC		1
+
 #define AD_LOG(fmt, args...) {printf("\033[1;34m");printf("%s[%d]:", __FUNCTION__, __LINE__);printf(fmt, ##args);printf("\033[0m");}
 
 typedef struct
@@ -138,8 +140,11 @@ typedef struct
 #define AUDIO_AI_DEV_ID_DMIC_IN   1
 #define AUDIO_AI_DEV_ID_I2S_IN    2
 
+#if USE_AMIC
 #define AI_DEV_ID (AUDIO_AI_DEV_ID_AMIC_IN)
-//#define AI_DEV_ID (AUDIO_AI_DEV_ID_DMIC_IN)
+#else
+#define AI_DEV_ID (AUDIO_AI_DEV_ID_DMIC_IN)
+#endif
 #define AO_DEV_ID (AUDIO_AO_DEV_ID_LINE_OUT)
 
 #define CSPOTTER_PATH_PREFIX        "/customer/res/CSpotter"
@@ -504,7 +509,8 @@ static MI_S32 SSTAR_AudioInStart()
     stAiVqeConfig.bAnrOpen = FALSE;
     stAiVqeConfig.bAgcOpen = TRUE;
     stAiVqeConfig.bEqOpen = FALSE;
-    stAiVqeConfig.bAecOpen = FALSE;
+    //stAiVqeConfig.bAecOpen = FALSE;
+    stAiVqeConfig.bAecOpen = TRUE;
 
     stAiVqeConfig.s32FrameSample = 128;
     stAiVqeConfig.s32WorkSampleRate = AUDIO_SAMPLE_RATE;
@@ -521,7 +527,7 @@ static MI_S32 SSTAR_AudioInStart()
 
     //Agc
     stAiVqeConfig.stAgcCfg.eMode = E_MI_AUDIO_ALGORITHM_MODE_USER;
-    stAiVqeConfig.stAgcCfg.s32NoiseGateDb = -50;           //[-80, 0], NoiseGateDb disable when value = -80
+    stAiVqeConfig.stAgcCfg.s32NoiseGateDb = -30;           //[-80, 0], NoiseGateDb disable when value = -80
     stAiVqeConfig.stAgcCfg.s32TargetLevelDb =   0;       //[-80, 0]
     stAiVqeConfig.stAgcCfg.stAgcGainInfo.s32GainInit = 1;  //[-20, 30]
     stAiVqeConfig.stAgcCfg.stAgcGainInfo.s32GainMax =  15; //[0, 30]
@@ -540,13 +546,29 @@ static MI_S32 SSTAR_AudioInStart()
        stAiVqeConfig.stEqCfg.s16EqGainDb[i] = 5;
     }
 
+    // aec
+    memset(&stAiVqeConfig.stAecCfg, 0, sizeof(MI_AI_AecConfig_t));
+    stAiVqeConfig.stAecCfg.u32AecSupfreq[0] = 20;
+    stAiVqeConfig.stAecCfg.u32AecSupfreq[1] = 40;
+    stAiVqeConfig.stAecCfg.u32AecSupfreq[2] = 60;
+    stAiVqeConfig.stAecCfg.u32AecSupfreq[3] = 80;
+    stAiVqeConfig.stAecCfg.u32AecSupfreq[4] = 100;
+    stAiVqeConfig.stAecCfg.u32AecSupfreq[5] = 120;
+    for (i = 0; i < sizeof(stAiVqeConfig.stAecCfg.u32AecSupIntensity) / sizeof(stAiVqeConfig.stAecCfg.u32AecSupIntensity[0]); i++)
+	{
+    	stAiVqeConfig.stAecCfg.u32AecSupIntensity[i] = 4;
+	}
+
     ExecFunc(MI_AI_SetPubAttr(AiDevId, &stAiSetAttr), MI_SUCCESS);
     ExecFunc(MI_AI_Enable(AiDevId), MI_SUCCESS);
     ExecFunc(MI_AI_EnableChn(AiDevId, AiChn), MI_SUCCESS);
 
 #if 1
+#if USE_AMIC
     ExecFunc(MI_AI_SetVqeVolume(AiDevId, 0, 9), MI_SUCCESS);
-    //ExecFunc(MI_AI_SetVqeVolume(AiDevId, 0, 3), MI_SUCCESS);
+#else
+    ExecFunc(MI_AI_SetVqeVolume(AiDevId, 0, 4), MI_SUCCESS);
+#endif
 
     s32Ret = MI_AI_SetVqeAttr(AiDevId, AiChn, AoDevId, AoChn, &stAiVqeConfig);
     if (s32Ret != MI_SUCCESS)
@@ -554,6 +576,7 @@ static MI_S32 SSTAR_AudioInStart()
         ST_ERR("%#x\n", s32Ret);
     }
     ExecFunc(MI_AI_EnableVqe(AiDevId, AiChn), MI_SUCCESS);
+
 #endif
 
     for (i = 0; i < stAiSetAttr.u32ChnCnt; i++)
