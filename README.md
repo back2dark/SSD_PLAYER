@@ -28,6 +28,16 @@ IDE:
 	   #player功能启用开关
 	   #CONFIG_PLAYER_SWITCH := "enable"
 	   CONFIG_PLAYER_SWITCH :=
+	   
+	   开启cloud play：
+	   #cloudplay功能启用开关
+	   CONFIG_CLOUD_PLAY_SWITCH := "enable"
+	   #CONFIG_CLOUD_PLAY_SWITCH :=
+	   
+	   关闭player：
+	   #cloudplay功能启用开关
+	   #CONFIG_CLOUD_PLAY_SWITCH := "enable"
+	   CONFIG_CLOUD_PLAY_SWITCH :=
 	
 	4. customer_player.tar.gz和customer_without_player.tar.gz是程序的运行环境：
 	   customer_player.tar.gz为开启用播放器功能的运行环境，会依赖于ffmpeg库；
