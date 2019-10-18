@@ -55,7 +55,7 @@ customer_player.tar.gz:
 	
 customer_without_player.tar.gz	
 
-	带播放器的app运行环境。
+	不带播放器的app运行环境。
 	操作步骤同上。
 	
 tool:
