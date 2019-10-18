@@ -174,6 +174,7 @@ const char* IconTab[]={
 		"painterActivity",
 		"networkSettingActivity",
 		"playlistActivity",
+		"cameraActivity",
 		"liveinputActivity"
 };
 
