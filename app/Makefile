@@ -11,7 +11,7 @@ CC = arm-linux-gnueabihf-g++
 STRIP = arm-linux-gnueabihf-strip
 
 CFLAGS = -I$(MINIGUI_PATH)/include -I$(MINIGUI_PATH)/include/freetype2 -I$(MINIGUI_PATH)/include/easyui -I$(PROJECT_PATH)/release/include
-LDFLAGS = -L$(MINIGUI_PATH)/lib -L$(PROJECT_PATH)/release/nvr/i2m/010A/glibc/8.2.1/lib/dynamic/
+LDFLAGS = -L$(MINIGUI_PATH)/lib -L$(PROJECT_PATH)/release/nvr/i2m/common/glibc/mi_libs/dynamic -L$(PROJECT_PATH)/release/nvr/i2m/common/glibc/ex_libs/dynamic
 CONFIG_PREFIX =.
 
 LOCAL_CFLAGS =
