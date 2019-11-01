@@ -1,8 +1,8 @@
 TARGET = zkgui
 
-#赋值对应的路径,此路径需要和
+#赋值对应的路径,此路径需要和本地sdk路径一致
 #PROJECT_PATH=/home/beal.wu/i2m_i6_master/project
-PROJECT_PATH=/home/koda.xu/I6/master_i6_ipc/project
+PROJECT_PATH=/home/koda.xu/I6/master/project
 
 MINIGUI_PATH=./minigui_dir
 
