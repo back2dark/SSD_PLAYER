@@ -251,8 +251,8 @@ MI_S32 CreatePlayerDev()
     MI_PANEL_LinkType_e eLinkType;
 
     system("echo 12 > /sys/class/gpio/export");
-	system("echo out > /sys/class/gpio/gpio12/direction");
-	system("echo 1 > /sys/class/gpio/gpio12/value");
+    system("echo out > /sys/class/gpio/gpio12/direction");
+    //system("echo 1 > /sys/class/gpio/gpio12/value");
 
     memset(&stDivpChnPort, 0, sizeof(MI_SYS_ChnPort_t));
     memset(&stDivpChnAttr, 0, sizeof(MI_DIVP_ChnAttr_t));
@@ -376,6 +376,8 @@ MI_S32 StartPlayAudio()
     MI_S32 s32SetVolumeDb;
     MI_S32 s32GetVolumeDb;
 
+    system("echo 1 > /sys/class/gpio/gpio12/value");
+
     //set Ao Attr struct
     memset(&stSetAttr, 0, sizeof(MI_AUDIO_Attr_t));
     stSetAttr.eBitwidth = E_MI_AUDIO_BIT_WIDTH_16;
@@ -421,13 +423,15 @@ MI_S32 StartPlayAudio()
     /* get AO volume */
     MI_AO_GetVolume(AoDevId, &s32GetVolumeDb);
 
-	return 0;
+    return 0;
 }
 
 void StopPlayAudio()
 {
     MI_AUDIO_DEV AoDevId = AUDIO_DEV;
     MI_AO_CHN AoChn = AUDIO_CHN;
+
+    system("echo 0 > /sys/class/gpio/gpio12/value");
 
     /* disable ao channel of */
     MI_AO_DisableChn(AoDevId, AoChn);
@@ -637,13 +641,21 @@ MI_S32 PlayComplete()
 // stay in playing page , clear play status,
 MI_S32 PlayError(int error)
 {
-	mTextview_msgPtr->setText("error occur");
-	mWindow_errMsgPtr->setVisible(true);
+    if (error == -101)
+        mTextview_msgPtr->setText("请检查网络连接！");
+    else if (error == -2)
+        mTextview_msgPtr->setText("不支持播放720P以上的视频！");
+    else if (error == -3)
+        mTextview_msgPtr->setText("解码速度不够，请降低视频帧率！");
+    else
+        mTextview_msgPtr->setText("Other Error Occur!");
+        
+    mWindow_errMsgPtr->setVisible(true);
 
     // stop play video & audio
     g_bPlaying = FALSE;
     g_bPause = FALSE;
-	printf("error in playing!\n");
+    printf("error in playing!\n");
     // sendmessage to stop playing
     player_deinit(g_pstPlayStat);
     StopPlayAudio();
@@ -651,10 +663,10 @@ MI_S32 PlayError(int error)
     ResetSpeedMode();
 
     SetPlayingStatus(false);
-	mTextview_speedPtr->setText("");
-	g_bShowPlayToolBar = FALSE;
+    mTextview_speedPtr->setText("");
+    g_bShowPlayToolBar = FALSE;
 
-//	EASYUICONTEXT->goBack();
+    //EASYUICONTEXT->goBack();
 
     return 0;
 }

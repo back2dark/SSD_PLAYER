@@ -3,7 +3,7 @@
 #include "packet.h"
 #include <sys/time.h>
 
-extern AVPacket flush_pkt;
+extern AVPacket a_flush_pkt, v_flush_pkt;
 
 static int decode_interrupt_cb(void *ctx)
 {
@@ -14,9 +14,11 @@ static int decode_interrupt_cb(void *ctx)
 static int demux_init(player_stat_t *is)
 {
     AVFormatContext *p_fmt_ctx = NULL;
+    AVCodecParameters* p_codec_par;
+    double totle_seconds;
     int err, i, ret;
-    int a_idx;
-    int v_idx;
+    int a_idx = -1;
+    int v_idx = -1;
 
     p_fmt_ctx = avformat_alloc_context();
     if (!p_fmt_ctx)
@@ -36,18 +38,10 @@ static int demux_init(player_stat_t *is)
     if (err < 0)
     {
         if (err == -101)
-        {
-            printf("error : network is not reachable!\n");
-            if (is->playerController.fpPlayError)
-                is->playerController.fpPlayError(err);
-        }
+            av_log(NULL, AV_LOG_WARNING, "WARNING: Network Is Not Reachable!!!\n");
         else
-        {
             printf("avformat_open_input() failed %d\n", err);
-            if (is->playerController.fpPlayError)
-                is->playerController.fpPlayError(err);
-        }
-        ret = -1;
+        ret = err;
         goto fail;
     }
     is->p_fmt_ctx = p_fmt_ctx;
@@ -66,10 +60,8 @@ static int demux_init(player_stat_t *is)
     if (is->playerController.fpGetDuration)
         is->playerController.fpGetDuration(is->p_fmt_ctx->duration);
 
-    // 2. 查找第一个音频流/视频流
-    a_idx = -1;
-    v_idx = -1;
-    for (i=0; i<(int)p_fmt_ctx->nb_streams; i++)
+    // 2. 查找所有音频流/视频流
+    for (i = 0; i < (int)p_fmt_ctx->nb_streams; i ++)
     {
         if ((p_fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) &&
             (a_idx == -1))
@@ -83,40 +75,35 @@ static int demux_init(player_stat_t *is)
             v_idx = i;
             printf("Find a video stream, index %d\n", v_idx);
         }
-        if (a_idx != -1 && v_idx != -1)
-        {
-            break;
-        }
     }
     if (a_idx == -1 && v_idx == -1)
     {
         printf("Cann't find any audio/video stream\n");
         ret = -1;
- fail:
-        if (p_fmt_ctx != NULL)
-        {
-            avformat_close_input(&p_fmt_ctx);
-        }
-
-        return ret;
+        goto fail;
     }
 
-    is->audio_idx = a_idx;
     is->video_idx = v_idx;
-    printf("audio idx: %d,video idx: %d\n",a_idx,v_idx);
+    is->audio_idx = a_idx;
+    printf("main audio idx: %d, main video idx: %d\n", is->audio_idx, is->video_idx);
 
-    double totle_seconds = p_fmt_ctx->duration * av_q2d(AV_TIME_BASE_Q);
+    totle_seconds = p_fmt_ctx->duration * av_q2d(AV_TIME_BASE_Q);
     printf("total time of file : %f\n", totle_seconds);
+
+    is->audio_complete = 1;
+    is->video_complete = 1;
 
     if (is->audio_idx >= 0)
     {
-        is->p_audio_stream = p_fmt_ctx->streams[a_idx];
+        is->p_audio_stream = p_fmt_ctx->streams[is->audio_idx];
+        is->audio_complete = 0;
         printf("audio codec_info_nb_frames:%d, nb_frames:%lld, probe_packet:%d\n", is->p_audio_stream->codec_info_nb_frames, is->p_audio_stream->nb_frames, is->p_audio_stream->probe_packets);
         //printf("audio duration:%lld, nb_frames:%lld\n", is->p_audio_stream->duration, is->p_audio_stream->nb_frames);
     }
     if (is->video_idx >= 0)
     {
-        is->p_video_stream = p_fmt_ctx->streams[v_idx];
+        is->p_video_stream = p_fmt_ctx->streams[is->video_idx];
+        is->video_complete = 0;
         printf("video codec_info_nbframes:%d, nb_frames:%lld, probe_packet:%d\n", is->p_video_stream->codec_info_nb_frames, is->p_video_stream->nb_frames, is->p_video_stream->probe_packets);
         //printf("video duration:%lld, nb_frames:%lld\n", is->p_video_stream->duration, is->p_video_stream->nb_frames);
     }
@@ -126,14 +113,33 @@ static int demux_init(player_stat_t *is)
     {
         is->playerController.fpGetCurrentPlayPosFromVideo = is->playerController.fpGetCurrentPlayPos;
         printf("get play pos from video stream\n");
+            
+        // 提示软解视频质量不超过720P
+        p_codec_par = is->p_video_stream->codecpar;
+        if (p_codec_par->codec_id != AV_CODEC_ID_H264 && p_codec_par->codec_id != AV_CODEC_ID_HEVC)
+        {
+            if (p_codec_par->width >= 1366 && p_codec_par->height >= 768)
+            {
+                av_log(NULL, AV_LOG_WARNING, "WARNNING: The resolution of video is over 720P!!!\n");
+                ret = -2;
+                goto fail;
+            }
+        }
     }
     else
     {
         is->playerController.fpGetCurrentPlayPosFromAudio = is->playerController.fpGetCurrentPlayPos;
         printf("get play pos from audio stream\n");
     }
-
+ 
     return 0;
+    
+fail:
+    if (p_fmt_ctx != NULL)
+    {
+        avformat_close_input(&p_fmt_ctx);
+    }
+    return ret;
 }
 
 int demux_deinit()
@@ -178,8 +184,6 @@ static void* demux_thread(void *arg)
     }
 
     is->eof = 0;
-    is->audio_complete = 0;
-    is->video_complete = 0;
     // 4. 解复用处理
     while (1)
     {
@@ -221,7 +225,8 @@ static void* demux_thread(void *arg)
         }
 
         if (is->seek_req) {
-            int64_t seek_target = is->seek_pos;
+            // 播放器根据进度条拖动位置进行跳转，此pos是相对的需换算为据对pos
+            int64_t seek_target = is->seek_pos + is->p_fmt_ctx->start_time;
             int64_t seek_min    = is->seek_rel > 0 ? seek_target - is->seek_rel + 2: INT64_MIN;
             int64_t seek_max    = is->seek_rel < 0 ? seek_target - is->seek_rel - 2: INT64_MAX;
             
@@ -229,7 +234,7 @@ static void* demux_thread(void *arg)
             // of the seek_pos/seek_rel variables
 
             ret = avformat_seek_file(is->p_fmt_ctx, -1, seek_min, seek_target, seek_max, is->seek_flags);
-            //ret = av_seek_frame(is->p_fmt_ctx, -1, seek_target, is->seek_flags);
+            //ret = av_seek_frame(is->p_fmt_ctx, is->video_idx, seek_target, AVSEEK_FLAG_ANY);
 
             if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR,
@@ -237,11 +242,11 @@ static void* demux_thread(void *arg)
             } else {
                 if (is->audio_idx >= 0) {
                     packet_queue_flush(&is->audio_pkt_queue);
-                    packet_queue_put(&is->audio_pkt_queue, &flush_pkt);
+                    packet_queue_put(&is->audio_pkt_queue, &a_flush_pkt);
                 }
                 if (is->video_idx >= 0) {
                     packet_queue_flush(&is->video_pkt_queue);
-                    packet_queue_put(&is->video_pkt_queue, &flush_pkt);
+                    packet_queue_put(&is->video_pkt_queue, &v_flush_pkt);
                 }
                 /*
                 if (is->seek_flags & AVSEEK_FLAG_BYTE) {
@@ -254,6 +259,8 @@ static void* demux_thread(void *arg)
             is->seek_req = 0;
             //is->queue_attachments_req = 1;
             is->eof = 0;
+            is->audio_complete = (is->audio_idx >= 0) ? 0 : 1;
+            is->video_complete = (is->video_idx >= 0) ? 0 : 1;
             if (is->paused)
                 step_to_next_frame(is);
         }
@@ -279,6 +286,11 @@ static void* demux_thread(void *arg)
             //printf("queue size: %d\n",is->audio_pkt_queue.size + is->video_pkt_queue.size);
             //printf("wait video queue avalible pktnb: %d\n",is->video_pkt_queue.nb_packets);
             //printf("wait audio queue avalible pktnb: %d\n",is->audio_pkt_queue.nb_packets);
+            if (is->audio_pkt_queue.nb_packets == 0 && is->video_pkt_queue.nb_packets >= MIN_FRAMES)
+            {
+                av_log(NULL, AV_LOG_WARNING, "WARNING: Please Reduce The Resolution Of Video!!!\n");
+                is->play_error = -3;
+            }
 
             continue;
         }
@@ -339,11 +351,15 @@ static void* demux_thread(void *arg)
     return NULL;
 }
 
+
+
 int open_demux(player_stat_t *is)
 {
-    if (demux_init(is) != 0)
+    int ret;
+    if (0 != (ret = demux_init(is)))
     {
         printf("demux_init() failed\n");
+        is->play_error = ret;    // 更新错误代号
         return -1;
     }
 

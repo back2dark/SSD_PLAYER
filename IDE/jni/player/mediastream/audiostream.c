@@ -37,7 +37,7 @@
 
 static int fda;
 static void sdl_audio_callback(void *opaque, uint8_t *stream, int len);
-extern AVPacket flush_pkt;
+extern AVPacket a_flush_pkt;
 
 // 从packet_queue中取一个packet，解码生成frame
 static int audio_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt_queue, AVFrame *frame)
@@ -99,7 +99,7 @@ static int audio_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt
         //if(pkt.data)
             //printf("read audio pkt end: %x,%x,%x\n",pkt.data[0],pkt.data[1],pkt.data[2]);
         // packet_queue中第一个总是flush_pkt。每次seek操作会插入flush_pkt，更新serial，开启新的播放序列
-        if (pkt.data == flush_pkt.data)
+        if (pkt.data == a_flush_pkt.data)
         {
             // 复位解码器内部状态/刷新内部缓冲区。当seek操作或切换流时应调用此函数。
             printf("packet_queue_get null\n");
@@ -132,8 +132,8 @@ static void* audio_decode_thread(void *arg)
     if (p_frame == NULL)
     {
         //return AVERROR(ENOMEM);
-    	printf("%s[%d] %s: no memory\n", __FILE__, __LINE__, __FUNCTION__);
-    	return NULL;
+        printf("%s[%d] %s: no memory\n", __FILE__, __LINE__, __FUNCTION__);
+        return NULL;
     }
 
     while (1)
@@ -248,7 +248,7 @@ static int audio_resample(player_stat_t *is, int64_t audio_callback_time)
     pthread_mutex_lock(&f->mutex);
     while (f->size - f->rindex_shown <= 0 && !f->pktq->abort_request) {
         printf("wait for audio frame\n");
-        if (!is->abort_request && is->eof && is->audio_pkt_queue.nb_packets == 0)
+        if (!is->audio_complete && is->eof && is->audio_pkt_queue.nb_packets == 0)
         {
             is->audio_complete = 1;
             printf("\033[32;2maudio play complete!\033[0m\n");
@@ -464,7 +464,7 @@ static void* audio_playing_thread(void *arg)
             // update ui pos
             if (is->playerController.fpGetCurrentPlayPosFromAudio)
             {
-                long long audioPts = (long long)(is->audio_clk.pts * 1000000LL);
+                long long audioPts = (long long)(is->audio_clk.pts * 1000000LL) - is->p_fmt_ctx->start_time;
                 long long frame_duration = 1000000 / (AUDIO_INPUT_SAMPRATE * av_get_bytes_per_sample(is->audio_param_tgt.fmt) / is->audio_frm_size);
 
                 if (is->playerController.fpGetCurrentPlayPosFromAudio)
@@ -584,7 +584,7 @@ static void sdl_audio_callback(void *opaque, uint8_t *stream, int len)
 
 int open_audio(player_stat_t *is)
 {
-    if (is && is->audio_idx >= 0)
+    if (!is->play_error && is->audio_idx >= 0)
     {
         open_audio_stream(is);       
         open_audio_playing(is);

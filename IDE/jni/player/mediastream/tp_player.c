@@ -314,27 +314,6 @@ static void player_control_callback(player_stat_t *is, player_control_t *func)
     }
 }
 
-static int demux_exit(player_stat_t *is)
-{
-    if (is)
-    {
-        is->abort_request = 1;
-        pthread_join(is->idle_tid, NULL);
-        av_frame_free(&is->p_frm_yuv);
-
-        frame_queue_destory(&is->video_frm_queue);
-        frame_queue_destory(&is->audio_frm_queue);
-
-        //packet_queue_destroy(&is->video_pkt_queue);
-        //packet_queue_destroy(&is->audio_pkt_queue);
-
-        pthread_cond_destroy(&is->continue_read_thread);
-        av_free(is->filename);
-        av_freep(&is);
-        //printf("\033[31;2mdemux_exit!\033[0m\n");
-    }
-    return 0;
-}
 
 int g_loop_flag = 0;
 player_stat_t *g_is = NULL;
@@ -372,7 +351,7 @@ int tp_player_open(char *fp, uint16_t x, uint16_t y, uint16_t width, uint16_t he
         ret = open_demux(g_is);
         if (ret < 0)
         {
-            demux_exit(g_is);
+            player_deinit(g_is);
             g_is = NULL;
             return -1;
         }

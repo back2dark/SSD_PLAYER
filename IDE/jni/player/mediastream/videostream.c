@@ -21,7 +21,7 @@
 
 
 static int fdv;
-extern AVPacket flush_pkt;
+extern AVPacket v_flush_pkt;
 
 
 static int queue_picture(player_stat_t *is, AVFrame *src_frame, double pts, double duration, int64_t pos)
@@ -111,7 +111,7 @@ static int video_decode_frame(AVCodecContext *p_codec_ctx, packet_queue_t *p_pkt
             return -1;
         }
 
-        if (pkt.data == flush_pkt.data)
+        if (pkt.data == v_flush_pkt.data)
         {
             // 复位解码器内部状态/刷新内部缓冲区。
             avcodec_flush_buffers(p_codec_ctx);
@@ -243,7 +243,7 @@ static double compute_target_delay(double delay, player_stat_t *is)
             delay = 2 * delay;              // 视频播放要放慢脚步，delay扩大至2倍
     }
 
-    av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n", delay, -diff);
+    //av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n", delay, -diff);
     //printf("video: delay=%0.3f A-V=%f\n", delay, -diff);
 
     return delay;
@@ -319,7 +319,7 @@ retry:
     if (frame_queue_nb_remaining(&is->video_frm_queue) <= 0)  // 所有帧已显示
     {    
         // if file is eof and there is no paket in queue, then do complete
-        if (!is->abort_request && is->eof && is->video_pkt_queue.nb_packets == 0)
+        if (!is->video_complete && is->eof && is->video_pkt_queue.nb_packets == 0)
         {
             is->video_complete = 1;
             printf("\033[32;2mvideo play complete!\033[0m\n");
@@ -376,7 +376,7 @@ retry:
     // update ui pos
     if (is->playerController.fpGetCurrentPlayPosFromVideo)
     {
-        long long videoPts = (long long)(is->video_clk.pts * 1000000LL);
+        long long videoPts = (long long)(is->video_clk.pts * 1000000LL) - is->p_fmt_ctx->start_time;
         AVRational frame_rate = av_guess_frame_rate(is->p_fmt_ctx, is->p_video_stream, NULL);
         long long frame_duration = 1000000 / frame_rate.num * frame_rate.den;
         //printf("video pts: %f, drift_pts: %f, duration: %lld, frame_duration:%lld\n", is->video_clk.pts, is->video_clk.pts_drift,
@@ -581,7 +581,7 @@ static int open_video_stream(player_stat_t *is)
 
 int open_video(player_stat_t *is)
 {
-    if (is && is->video_idx >= 0)
+    if (!is->play_error && is->video_idx >= 0)
     {
         open_video_stream(is);
         open_video_playing(is);

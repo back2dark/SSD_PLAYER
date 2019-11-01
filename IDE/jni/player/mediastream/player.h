@@ -47,7 +47,7 @@ extern "C" {               // 告诉编译器下列代码要以C链接约定的�
 #define AV_NOSYNC_THRESHOLD 10.0
 
 /* polls for possible required screen refresh at least this often, should be less than 1/fps */
-#define REFRESH_RATE 0.01
+#define REFRESH_RATE 0.005
 
 #define SDL_AUDIO_BUFFER_SIZE 1024
 #define MAX_AUDIO_FRAME_SIZE 192000
@@ -213,7 +213,8 @@ typedef struct {
     pthread_t videoDecode_tid;  //video解码线程
     pthread_t videoPlay_tid;    //video播放线程
 
-	int decode_type;
+    int decode_type;
+    int play_error;
 
     player_control_t playerController;
 }   player_stat_t;

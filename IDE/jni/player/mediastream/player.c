@@ -27,7 +27,7 @@
 #include "videostream.h"
 #include "audiostream.h"
 
-AVPacket flush_pkt;
+AVPacket a_flush_pkt, v_flush_pkt;
 static int av_sync_type = AV_SYNC_AUDIO_MASTER;
 static float seek_interval = 10;
 
@@ -207,23 +207,23 @@ static void* idle_thread(void *arg)
 
         av_usleep((unsigned)(50 * 1000));   //阻塞50ms
 
-        if (is->video_idx >= 0 && is->audio_idx >= 0)
+        if (is->play_error < 0)
         {
-            if (is->audio_complete && is->video_complete)
+            if (is->playerController.fpPlayError)
             {
-                if (is->playerController.fpPlayComplete) {
-                    is->playerController.fpPlayComplete();
-                    break;
-                }
+                is->playerController.fpPlayError(is->play_error);
+                if (is)
+                    is->play_error = 0;
             }
         }
         else
         {
-            if (is->audio_complete || is->video_complete)
+            if (is->audio_complete && is->video_complete)
             {
-                if (is->playerController.fpPlayComplete) {
+                if (is->playerController.fpPlayComplete)
+                {
                     is->playerController.fpPlayComplete();
-					break;
+                    break;
                 }
             }
         }
@@ -263,16 +263,18 @@ player_stat_t *player_init(const char *p_input_file)
         goto fail;
     }
 
-    av_init_packet(&flush_pkt);
-    flush_pkt.data = (uint8_t *)&flush_pkt;
+    av_init_packet(&a_flush_pkt);
+    av_init_packet(&v_flush_pkt);
+    a_flush_pkt.data = (uint8_t *)&a_flush_pkt;
+    v_flush_pkt.data = (uint8_t *)&v_flush_pkt;
     
-    packet_queue_put(&is->video_pkt_queue, &flush_pkt);
-    packet_queue_put(&is->audio_pkt_queue, &flush_pkt);
+    packet_queue_put(&is->video_pkt_queue, &a_flush_pkt);
+    packet_queue_put(&is->audio_pkt_queue, &v_flush_pkt);
 
     if (pthread_cond_init(&is->continue_read_thread,NULL) != SUCCESS)
     {
         printf("[%s %d]exec function failed\n", __FUNCTION__, __LINE__);
-        return NULL;
+        goto fail;
     }
 
     init_clock(&is->video_clk, &is->video_pkt_queue.serial);
@@ -283,17 +285,24 @@ player_stat_t *player_init(const char *p_input_file)
     if (is->p_frm_yuv == NULL)
     {
         printf("av_frame_alloc() for p_frm_raw failed\n");
-        return NULL;
+        goto fail;
     }
     is->av_sync_type = av_sync_type;
+    is->play_error = 0;
 
     pthread_create(&is->idle_tid, NULL, idle_thread, is);
 
     return is;
 fail:
-    player_deinit(is);
+    av_free(is->filename);
+    frame_queue_destory(&is->video_frm_queue);
+    frame_queue_destory(&is->audio_frm_queue);
+    packet_queue_flush(&is->video_pkt_queue);
+    packet_queue_flush(&is->audio_pkt_queue);
+    av_frame_free(&is->p_frm_yuv);
+    av_freep(&is);
 
-    return is;
+    return NULL;
 }
 
 
@@ -303,35 +312,40 @@ int player_deinit(player_stat_t *is)
     
     /* XXX: use a special url_shutdown call to abort parse cleanly */
     is->abort_request = 1;
-    pthread_join(is->read_tid, NULL);
-
-    /* close each stream */
-    if (is->audio_idx >= 0)
-    {
-        stream_component_close(is, is->audio_idx);
-        printf("audio stream_component_close finish\n");
-    }
-    if (is->video_idx >= 0)
-    {
-        stream_component_close(is, is->video_idx);
-        printf("video stream_component_close finish\n");
-    }
-   
-    av_frame_free(&is->p_frm_yuv);
     
-    avformat_close_input(&is->p_fmt_ctx);
+    // 如果运行期间没有错误或者解码速度不够,按正常流程退出
+    if (!is->play_error || is->play_error == -3)
+    {
+        pthread_join(is->read_tid, NULL);
 
+        /* close each stream */
+        if (is->audio_idx >= 0)
+        {
+            stream_component_close(is, is->audio_idx);
+            printf("audio stream_component_close finish\n");
+        }
+        if (is->video_idx >= 0)
+        {
+            stream_component_close(is, is->video_idx);
+            printf("video stream_component_close finish\n");
+        }
+
+        avformat_close_input(&is->p_fmt_ctx);
+
+        sws_freeContext(is->img_convert_ctx);
+    }
+    /* free all pictures */
     packet_queue_destroy(&is->video_pkt_queue);
     
     packet_queue_destroy(&is->audio_pkt_queue);
-    /* free all pictures */
+
     frame_queue_destory(&is->video_frm_queue);
 
     frame_queue_destory(&is->audio_frm_queue);
 
     pthread_cond_destroy(&is->continue_read_thread);
 
-    sws_freeContext(is->img_convert_ctx);
+    av_frame_free(&is->p_frm_yuv);
 
     av_free(is->filename);
 
@@ -361,6 +375,7 @@ void toggle_pause(player_stat_t *is)
     is->step = 0;
 }
 
+// 此处输入的pos定义为相对总时长的相对位置
 void stream_seek(player_stat_t *is, int64_t pos, int64_t rel, int seek_by_bytes)
 {
     if (!is->seek_req) {
