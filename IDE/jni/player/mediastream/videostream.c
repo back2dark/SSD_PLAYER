@@ -581,7 +581,7 @@ static int open_video_stream(player_stat_t *is)
 
 int open_video(player_stat_t *is)
 {
-    if (!is->play_error && is->video_idx >= 0)
+    if (is && !is->play_error && is->video_idx >= 0)
     {
         open_video_stream(is);
         open_video_playing(is);

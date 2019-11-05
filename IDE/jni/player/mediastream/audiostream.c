@@ -584,7 +584,7 @@ static void sdl_audio_callback(void *opaque, uint8_t *stream, int len)
 
 int open_audio(player_stat_t *is)
 {
-    if (!is->play_error && is->audio_idx >= 0)
+    if (is && !is->play_error && is->audio_idx >= 0)
     {
         open_audio_stream(is);       
         open_audio_playing(is);

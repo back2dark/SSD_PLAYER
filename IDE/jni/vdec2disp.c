@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include "panelconfig.h"
+
 //========================== Add play audui file ============================
 #define MI_AUDIO_SAMPLE_PER_FRAME 1024
 #define DMA_BUF_SIZE_8K     (8000)
@@ -19,23 +21,10 @@
 #define DMA_BUF_SIZE_32K    (32000)
 #define DMA_BUF_SIZE_48K    (48000)
 
-#define UI_1024_600		1
 static int g_VdecRun = FALSE;
 static pthread_t g_VdeStream_tid = 0;
 
 #define MI_U32VALUE(pu8Data, index) (pu8Data[index]<<24)|(pu8Data[index+1]<<16)|(pu8Data[index+2]<<8)|(pu8Data[index+3])
-
-#if UI_1024_600
-#define VIDEO_DISP_W 1024
-#define VIDEO_DISP_H 600
-#else
-#define VIDEO_DISP_W 800
-#define VIDEO_DISP_H 480
-#endif
-
-#define VIDEO_STREAM_W 704
-#define VIDEO_STREAM_H 480
-
 #define ST_DBG printf
 
 #ifndef ExecFunc
@@ -705,15 +694,15 @@ MI_S32 SSTAR_CreateVdec2DispPipe(MI_S32 s32VdecChn, MI_S32 s32DivpChn, MI_U32 u3
 {
     ST_Rect_T stCrop= {0, 0, 0, 0};
     MI_DISP_InputPortAttr_t stInputPortAttr;
-    SSTAR_CreateVdecChannel(s32VdecChn, s32CodecType, u32VdecW, u32VdecH, VIDEO_DISP_W, VIDEO_DISP_H);
+    SSTAR_CreateVdecChannel(s32VdecChn, s32CodecType, u32VdecW, u32VdecH, PANEL_MAX_WIDTH, PANEL_MAX_HEIGHT);
 
     MI_DISP_GetInputPortAttr(0, 0, &stInputPortAttr);
 	stInputPortAttr.stDispWin.u16X      = 0;
 	stInputPortAttr.stDispWin.u16Y      = 0;
-	stInputPortAttr.stDispWin.u16Width  = VIDEO_DISP_W;
-	stInputPortAttr.stDispWin.u16Height = VIDEO_DISP_H;
-	stInputPortAttr.u16SrcWidth = VIDEO_DISP_W;
-	stInputPortAttr.u16SrcHeight = VIDEO_DISP_H;
+	stInputPortAttr.stDispWin.u16Width  = PANEL_MAX_WIDTH;
+	stInputPortAttr.stDispWin.u16Height = PANEL_MAX_HEIGHT;
+	stInputPortAttr.u16SrcWidth = PANEL_MAX_WIDTH;
+	stInputPortAttr.u16SrcHeight = PANEL_MAX_HEIGHT;
 
 	printf("disp input: w=%d, h=%d\n", stInputPortAttr.u16SrcWidth, stInputPortAttr.u16SrcHeight);
 	MI_DISP_DisableInputPort(0, 0);

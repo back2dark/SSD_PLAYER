@@ -20,9 +20,8 @@
 #include "list.h"
 #include "cmdqueue.h"
 #include "char_conversion.h"
+#include "appconfig.h"
 
-
-#define USE_AMIC		1
 
 #define AD_LOG(fmt, args...) {printf("\033[1;34m");printf("%s[%d]:", __FUNCTION__, __LINE__);printf(fmt, ##args);printf("\033[0m");}
 

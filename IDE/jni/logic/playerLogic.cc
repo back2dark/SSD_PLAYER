@@ -46,27 +46,11 @@
 #include "videostream.h"
 #include "audiostream.h"
 #include "player.h"
+#include "panelconfig.h"
 
-
-#define USE_PANEL_1024_600		1
-#define USE_MIPI_PANEL			0
-
-#if USE_PANEL_1024_600
-#include "SAT070CP50_1024x600.h"
-#else
-#include "SAT070AT50_800x480.h"
-#endif
 
 #define UI_MAX_WIDTH			800
 #define UI_MAX_HEIGHT			480
-
-#if USE_PANEL_1024_600
-#define PANEL_MAX_WIDTH			1024
-#define PANEL_MAX_HEIGHT		600
-#else
-#define PANEL_MAX_WIDTH			800
-#define PANEL_MAX_HEIGHT		480
-#endif
 
 #define ALIGN_DOWN(x, n)		(x / n * n)
 #define MAKE_YUYV_VALUE(y,u,v)  ((y) << 24) | ((u) << 16) | ((y) << 8) | (v)

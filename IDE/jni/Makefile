@@ -55,10 +55,12 @@ INCLUDE_DIR := -I$(EASYUI_COMMON_INCLUDE) \
 					-I ../jni/sdkdir/include \
 					-I ../jni/voicedetect
 
-LDFLAGS =  -leasyui -pthread -lmi_sys -lmi_disp -lmi_panel -lmi_ao -lmi_gfx -lmi_divp -lmi_vdec -lmi_common -lstdc++ -lmi_ai -lCSpotter -ldl
+LDFLAGS =  -leasyui -pthread -lmi_sys -lmi_disp -lmi_panel -lmi_ao -lmi_gfx -lmi_divp -lmi_vdec -lmi_common -lstdc++ -lmi_ai -lCSpotter -ldl -lrt
 LDFLAGS += -L$(ZKSW_PREBUILT_LIB_PATH)/system -L. -L ../jni/sdkdir/lib
 
 INCLUDE_DIR += -I ../jni/player -I ../jni/player/ffmpeg/include -I ../jni/player/mediastream -I ../jni/player/usbdetect
+INCLUDE_DIR += -I ../jni/v4l2/inc -I ../jni/v4l2/inc/uvc -I ../jni/v4l2/inc/video -I ../jni/v4l2/src -I ../jni/v4l2/src/control -I ../jni/v4l2/src/gcc \
+               -I ../jni/v4l2/src/libv4l -I ../jni/v4l2/src/processing
 
 ifneq ($(CONFIG_WLAN_SWITCH),)
 CFLAGS+=-DSUPPORT_WLAN_MODULE
@@ -72,7 +74,6 @@ ifneq ($(CONFIG_PLAYER_SWITCH),)
 CFLAGS+=-DSUPPORT_PLAYER_MODULE
 CXXFLAGS+=-DSUPPORT_PLAYER_MODULE
 
-#INCLUDE_DIR += -I ../jni/player -I ../jni/player/ffmpeg/include -I ../jni/player/mediastream -I ../jni/player/usbdetect
 LDFLAGS += -lavformat -lavcodec -lavutil -lswscale -lswresample -L../jni/player/ffmpeg/lib
 endif
 
