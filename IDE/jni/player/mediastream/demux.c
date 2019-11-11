@@ -286,7 +286,8 @@ static void* demux_thread(void *arg)
             //printf("queue size: %d\n",is->audio_pkt_queue.size + is->video_pkt_queue.size);
             //printf("wait video queue avalible pktnb: %d\n",is->video_pkt_queue.nb_packets);
             //printf("wait audio queue avalible pktnb: %d\n",is->audio_pkt_queue.nb_packets);
-            if (is->audio_pkt_queue.nb_packets == 0 && is->video_pkt_queue.nb_packets >= MIN_FRAMES)
+            //if (is->audio_pkt_queue.nb_packets == 0 && is->video_pkt_queue.nb_packets >= MIN_FRAMES)
+            if (is->audio_pkt_queue.size + is->video_pkt_queue.size > MAX_QUEUE_SIZE)
             {
                 av_log(NULL, AV_LOG_WARNING, "WARNING: Please Reduce The Resolution Of Video!!!\n");
                 is->play_error = -3;
