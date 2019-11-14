@@ -5,7 +5,7 @@
 extern "C" {               // 告诉编译器下列代码要以C链接约定的模式进行链接
 #endif
 
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
+#if defined(SUPPORT_CLOUD_PLAY_MODULE) || defined(SUPPORT_PLAYER_MODULE)
 #include "player.h"
 #include "mi_divp.h"
 #include "mi_divp_datatype.h"

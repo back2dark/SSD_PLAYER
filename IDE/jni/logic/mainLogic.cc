@@ -97,6 +97,8 @@ private:
 
 static WifiSetupThread wifiSetupThread;
 #endif
+
+static int g_curPageIdx = 0;
 /**
  * 注册定时器
  * 在此数组中添加即可
@@ -175,6 +177,9 @@ const char* IconTab[]={
 		"networkSettingActivity",
 		"playlistActivity",
 		"cameraActivity",
+		"rtspActivity",
+		"bluetoothmeshActivity",
+		"cellnetworkActivity",
 		"liveinputActivity"
 };
 
@@ -201,5 +206,50 @@ static void onSlideItemClick_Slidewindow1(ZKSlideWindow *pSlideWindow, int index
 	}
 #endif
 
+	// bluetooth is not prepared
+	if (!strcmp(IconTab[index], "bluetoothmeshActivity"))
+	{
+		return;
+	}
+
+	printf("select idx is %d\n", index);
 	EASYUICONTEXT->openActivity(IconTab[index]);
+}
+
+static void onSlidePageChange_Slidewindow1(ZKSlideWindow *pSlideWindow, int page) {
+	int totalPage = pSlideWindow->getPageSize();
+	g_curPageIdx = pSlideWindow->getCurrentPage();
+	printf("Logic: param page is %d, total page is %d, cur page is %d\n", page, totalPage, g_curPageIdx);
+	mListview_indicatorPtr->refreshListView();
+}
+
+static int getListItemCount_Listview_indicator(const ZKListView *pListView) {
+    //LOGD("getListItemCount_Listview_indicator !\n");
+    return 3;
+}
+
+static void obtainListItemData_Listview_indicator(ZKListView *pListView,ZKListView::ZKListItem *pListItem, int index) {
+    //LOGD(" obtainListItemData_ Listview_indicator  !!!\n");
+	if (index == g_curPageIdx)
+		pListItem->setBackgroundPic("slider_/indicator_focus.png");
+	else
+		pListItem->setBackgroundPic("slider_/indicator.png");
+}
+
+static void onListItemClick_Listview_indicator(ZKListView *pListView, int index, int id) {
+    //LOGD(" onListItemClick_ Listview_indicator  !!!\n");
+	int curPageIdx =  g_curPageIdx;
+	printf("click idx is %d, curPageIdx is %d\n", index, g_curPageIdx);
+
+	while (curPageIdx < index)
+	{
+		mSlidewindow1Ptr->turnToNextPage();
+		curPageIdx++;
+	}
+
+	while (curPageIdx > index)
+	{
+		mSlidewindow1Ptr->turnToPrevPage();
+		curPageIdx--;
+	}
 }

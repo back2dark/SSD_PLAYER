@@ -83,7 +83,9 @@ static int device_open(DeviceContex_t *ctx, const char* device_path)
     if (fd < 0) {
         DEMO_ERR("Cannot open video device %s: %s\n",
             device_path, strerror(errno));
-        return errno;
+        //return errno;
+        err = fd;
+        goto fail;
     }
 
     if (v4l2_ioctl(fd, VIDIOC_QUERYCAP, &cap) < 0) {
@@ -703,7 +705,8 @@ int v4l2_read_close(DeviceContex_t *ctx)
 
     mmap_close(s);
 
-    v4l2_close(s->fd);
+    if (s->fd >= 0)
+    	v4l2_close(s->fd);
     return 0;
 }
 

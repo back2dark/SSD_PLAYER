@@ -1,24 +1,23 @@
 /***********************************************
 /gen auto by zuitools
 ***********************************************/
-#include "mainActivity.h"
+#include "bluetoothmeshActivity.h"
 
 /*TAG:GlobalVariable全局变量*/
-static ZKListView* mListview_indicatorPtr;
-static ZKDigitalClock* mDigitalclock2Ptr;
-static ZKWindow* mWindow2Ptr;
-static ZKSlideWindow* mSlidewindow1Ptr;
-static mainActivity* mActivityPtr;
+static ZKButton* mButtonLedswPtr;
+static ZKTextView* mTextviewLedPtr;
+static ZKButton* msys_backPtr;
+static bluetoothmeshActivity* mActivityPtr;
 
 /*register activity*/
-REGISTER_ACTIVITY(mainActivity);
+REGISTER_ACTIVITY(bluetoothmeshActivity);
 
 typedef struct {
 	int id; // 定时器ID ， 不能重复
 	int time; // 定时器  时间间隔  单位 毫秒
 }S_ACTIVITY_TIMEER;
 
-#include "logic/mainLogic.cc"
+#include "logic/bluetoothmeshLogic.cc"
 
 /***********/
 typedef struct {
@@ -45,6 +44,8 @@ typedef struct {
 
 /*TAG:ButtonCallbackTab按键映射表*/
 static S_ButtonCallback sButtonCallbackTab[] = {
+    ID_BLUETOOTHMESH_ButtonLedsw, onButtonClick_ButtonLedsw,
+    ID_BLUETOOTHMESH_sys_back, onButtonClick_sys_back,
 };
 /***************/
 
@@ -70,7 +71,6 @@ typedef struct {
 }S_ListViewFunctionsCallback;
 /*TAG:ListViewFunctionsCallback*/
 static S_ListViewFunctionsCallback SListViewFunctionsCallbackTab[] = {
-    ID_MAIN_Listview_indicator, getListItemCount_Listview_indicator, obtainListItemData_Listview_indicator, onListItemClick_Listview_indicator,
 };
 
 
@@ -81,17 +81,6 @@ typedef struct {
 }S_SlideWindowItemClickCallback;
 /*TAG:SlideWindowFunctionsCallbackTab*/
 static S_SlideWindowItemClickCallback SSlideWindowItemClickCallbackTab[] = {
-    ID_MAIN_Slidewindow1, onSlideItemClick_Slidewindow1,
-};
-
-typedef void (*SlideWindowPageChangeCallback)(ZKSlideWindow *pSlideWindow, int page);
-typedef struct {
-    int id;
-    SlideWindowPageChangeCallback onSlidePageChangeCallback;
-}S_SlideWindowPageChangeCallback;
-/*TAG:SlideWindowFunctionsCallbackTab*/
-static S_SlideWindowPageChangeCallback SSlideWindowPageChangeCallbackTab[] = {
-    ID_MAIN_Slidewindow1, onSlidePageChange_Slidewindow1,
 };
 
 
@@ -116,39 +105,37 @@ static S_VideoViewCallback SVideoViewCallbackTab[] = {
 };
 
 
-mainActivity::mainActivity() {
+bluetoothmeshActivity::bluetoothmeshActivity() {
 	//todo add init code here
-	mVideoLoopIndex = 0;
+	mVideoLoopIndex = -1;
 	mVideoLoopErrorCount = 0;
 }
 
-mainActivity::~mainActivity() {
-	//todo add init file here
-    // 退出应用时需要反注册
+bluetoothmeshActivity::~bluetoothmeshActivity() {
+  //todo add init file here
+  // 退出应用时需要反注册
     EASYUICONTEXT->unregisterGlobalTouchListener(this);
     onUI_quit();
     unregisterProtocolDataUpdateListener(onProtocolDataUpdate);
 }
 
-const char* mainActivity::getAppName() const{
-	return "main.ftu";
+const char* bluetoothmeshActivity::getAppName() const{
+	return "bluetoothmesh.ftu";
 }
 
 //TAG:onCreate
-void mainActivity::onCreate() {
+void bluetoothmeshActivity::onCreate() {
 	Activity::onCreate();
-    mSlidewindow1Ptr = (ZKSlideWindow*)findControlByID(ID_MAIN_Slidewindow1);if(mSlidewindow1Ptr!= NULL){mSlidewindow1Ptr->setSlideItemClickListener(this);}
-    mListview_indicatorPtr = (ZKListView*)findControlByID(ID_MAIN_Listview_indicator);if(mListview_indicatorPtr!= NULL){mListview_indicatorPtr->setListAdapter(this);mListview_indicatorPtr->setItemClickListener(this);}
-    mDigitalclock2Ptr = (ZKDigitalClock*)findControlByID(ID_MAIN_Digitalclock2);
-    mWindow2Ptr = (ZKWindow*)findControlByID(ID_MAIN_Window2);
-    mSlidewindow1Ptr = (ZKSlideWindow*)findControlByID(ID_MAIN_Slidewindow1);if(mSlidewindow1Ptr!= NULL){mSlidewindow1Ptr->setSlideItemClickListener(this);mSlidewindow1Ptr->setSlidePageChangeListener(this);}
+    mButtonLedswPtr = (ZKButton*)findControlByID(ID_BLUETOOTHMESH_ButtonLedsw);
+    mTextviewLedPtr = (ZKTextView*)findControlByID(ID_BLUETOOTHMESH_TextviewLed);
+    msys_backPtr = (ZKButton*)findControlByID(ID_BLUETOOTHMESH_sys_back);
 	mActivityPtr = this;
 	onUI_init();
     registerProtocolDataUpdateListener(onProtocolDataUpdate); 
     rigesterActivityTimer();
 }
 
-void mainActivity::onClick(ZKBase *pBase) {
+void bluetoothmeshActivity::onClick(ZKBase *pBase) {
 	//TODO: add widget onClik code 
     int buttonTablen = sizeof(sButtonCallbackTab) / sizeof(S_ButtonCallback);
     for (int i = 0; i < buttonTablen; ++i) {
@@ -172,30 +159,30 @@ void mainActivity::onClick(ZKBase *pBase) {
 	Activity::onClick(pBase);
 }
 
-void mainActivity::onResume() {
+void bluetoothmeshActivity::onResume() {
 	Activity::onResume();
 	EASYUICONTEXT->registerGlobalTouchListener(this);
 	startVideoLoopPlayback();
-//	onUI_show();
+	onUI_show();
 }
 
-void mainActivity::onPause() {
+void bluetoothmeshActivity::onPause() {
 	Activity::onPause();
 	EASYUICONTEXT->unregisterGlobalTouchListener(this);
 	stopVideoLoopPlayback();
-//	onUI_hide();
+	onUI_hide();
 }
 
-void mainActivity::onIntent(const Intent *intentPtr) {
+void bluetoothmeshActivity::onIntent(const Intent *intentPtr) {
 	Activity::onIntent(intentPtr);
-//	onUI_intent(intentPtr);
+	onUI_intent(intentPtr);
 }
 
-bool mainActivity::onTimer(int id) {
+bool bluetoothmeshActivity::onTimer(int id) {
 	return onUI_Timer(id);
 }
 
-void mainActivity::onProgressChanged(ZKSeekBar *pSeekBar, int progress){
+void bluetoothmeshActivity::onProgressChanged(ZKSeekBar *pSeekBar, int progress){
 
     int seekBarTablen = sizeof(SZKSeekBarCallbackTab) / sizeof(S_ZKSeekBarCallback);
     for (int i = 0; i < seekBarTablen; ++i) {
@@ -206,7 +193,7 @@ void mainActivity::onProgressChanged(ZKSeekBar *pSeekBar, int progress){
     }
 }
 
-int mainActivity::getListItemCount(const ZKListView *pListView) const{
+int bluetoothmeshActivity::getListItemCount(const ZKListView *pListView) const{
     int tablen = sizeof(SListViewFunctionsCallbackTab) / sizeof(S_ListViewFunctionsCallback);
     for (int i = 0; i < tablen; ++i) {
         if (SListViewFunctionsCallbackTab[i].id == pListView->getID()) {
@@ -217,7 +204,7 @@ int mainActivity::getListItemCount(const ZKListView *pListView) const{
     return 0;
 }
 
-void mainActivity::obtainListItemData(ZKListView *pListView,ZKListView::ZKListItem *pListItem, int index){
+void bluetoothmeshActivity::obtainListItemData(ZKListView *pListView,ZKListView::ZKListItem *pListItem, int index){
     int tablen = sizeof(SListViewFunctionsCallbackTab) / sizeof(S_ListViewFunctionsCallback);
     for (int i = 0; i < tablen; ++i) {
         if (SListViewFunctionsCallbackTab[i].id == pListView->getID()) {
@@ -227,7 +214,7 @@ void mainActivity::obtainListItemData(ZKListView *pListView,ZKListView::ZKListIt
     }
 }
 
-void mainActivity::onItemClick(ZKListView *pListView, int index, int id){
+void bluetoothmeshActivity::onItemClick(ZKListView *pListView, int index, int id){
     int tablen = sizeof(SListViewFunctionsCallbackTab) / sizeof(S_ListViewFunctionsCallback);
     for (int i = 0; i < tablen; ++i) {
         if (SListViewFunctionsCallbackTab[i].id == pListView->getID()) {
@@ -237,7 +224,7 @@ void mainActivity::onItemClick(ZKListView *pListView, int index, int id){
     }
 }
 
-void mainActivity::onSlideItemClick(ZKSlideWindow *pSlideWindow, int index) {
+void bluetoothmeshActivity::onSlideItemClick(ZKSlideWindow *pSlideWindow, int index) {
     int tablen = sizeof(SSlideWindowItemClickCallbackTab) / sizeof(S_SlideWindowItemClickCallback);
     for (int i = 0; i < tablen; ++i) {
         if (SSlideWindowItemClickCallbackTab[i].id == pSlideWindow->getID()) {
@@ -247,21 +234,11 @@ void mainActivity::onSlideItemClick(ZKSlideWindow *pSlideWindow, int index) {
     }
 }
 
-void mainActivity::onSlidePageChange(ZKSlideWindow *pSlideWindow, int page) {
-	int tablen = sizeof(SSlideWindowPageChangeCallbackTab) / sizeof(S_SlideWindowPageChangeCallback);
-	for (int i = 0; i < tablen; ++i) {
-		if (SSlideWindowPageChangeCallbackTab[i].id == pSlideWindow->getID()) {
-			SSlideWindowPageChangeCallbackTab[i].onSlidePageChangeCallback(pSlideWindow, page);
-			break;
-		}
-	}
+bool bluetoothmeshActivity::onTouchEvent(const MotionEvent &ev) {
+    return onbluetoothmeshActivityTouchEvent(ev);
 }
 
-bool mainActivity::onTouchEvent(const MotionEvent &ev) {
-    return onmainActivityTouchEvent(ev);
-}
-
-void mainActivity::onTextChanged(ZKTextView *pTextView, const std::string &text) {
+void bluetoothmeshActivity::onTextChanged(ZKTextView *pTextView, const std::string &text) {
     int tablen = sizeof(SEditTextInputCallbackTab) / sizeof(S_EditTextInputCallback);
     for (int i = 0; i < tablen; ++i) {
         if (SEditTextInputCallbackTab[i].id == pTextView->getID()) {
@@ -271,7 +248,7 @@ void mainActivity::onTextChanged(ZKTextView *pTextView, const std::string &text)
     }
 }
 
-void mainActivity::rigesterActivityTimer() {
+void bluetoothmeshActivity::rigesterActivityTimer() {
     int tablen = sizeof(REGISTER_ACTIVITY_TIMER_TAB) / sizeof(S_ACTIVITY_TIMEER);
     for (int i = 0; i < tablen; ++i) {
         S_ACTIVITY_TIMEER temp = REGISTER_ACTIVITY_TIMER_TAB[i];
@@ -280,7 +257,7 @@ void mainActivity::rigesterActivityTimer() {
 }
 
 
-void mainActivity::onVideoPlayerMessage(ZKVideoView *pVideoView, int msg) {
+void bluetoothmeshActivity::onVideoPlayerMessage(ZKVideoView *pVideoView, int msg) {
     int tablen = sizeof(SVideoViewCallbackTab) / sizeof(S_VideoViewCallback);
     for (int i = 0; i < tablen; ++i) {
         if (SVideoViewCallbackTab[i].id == pVideoView->getID()) {
@@ -295,11 +272,14 @@ void mainActivity::onVideoPlayerMessage(ZKVideoView *pVideoView, int msg) {
     }
 }
 
-void mainActivity::videoLoopPlayback(ZKVideoView *pVideoView, int msg, int callbackTabIndex) {
+void bluetoothmeshActivity::videoLoopPlayback(ZKVideoView *pVideoView, int msg, size_t callbackTabIndex) {
 
 	switch (msg) {
 	case ZKVideoView::E_MSGTYPE_VIDEO_PLAY_STARTED:
 		LOGD("ZKVideoView::E_MSGTYPE_VIDEO_PLAY_STARTED\n");
+    if (callbackTabIndex >= (sizeof(SVideoViewCallbackTab)/sizeof(S_VideoViewCallback))) {
+      break;
+    }
 		pVideoView->setVolume(SVideoViewCallbackTab[callbackTabIndex].defaultvolume / 10.0);
 		mVideoLoopErrorCount = 0;
 		break;
@@ -332,7 +312,7 @@ void mainActivity::videoLoopPlayback(ZKVideoView *pVideoView, int msg, int callb
 	}
 }
 
-void mainActivity::startVideoLoopPlayback() {
+void bluetoothmeshActivity::startVideoLoopPlayback() {
     int tablen = sizeof(SVideoViewCallbackTab) / sizeof(S_VideoViewCallback);
     for (int i = 0; i < tablen; ++i) {
     	if (SVideoViewCallbackTab[i].loop) {
@@ -347,7 +327,7 @@ void mainActivity::startVideoLoopPlayback() {
     }
 }
 
-void mainActivity::stopVideoLoopPlayback() {
+void bluetoothmeshActivity::stopVideoLoopPlayback() {
     int tablen = sizeof(SVideoViewCallbackTab) / sizeof(S_VideoViewCallback);
     for (int i = 0; i < tablen; ++i) {
     	if (SVideoViewCallbackTab[i].loop) {
@@ -363,7 +343,7 @@ void mainActivity::stopVideoLoopPlayback() {
     }
 }
 
-bool mainActivity::parseVideoFileList(const char *pFileListPath, std::vector<string>& mediaFileList) {
+bool bluetoothmeshActivity::parseVideoFileList(const char *pFileListPath, std::vector<string>& mediaFileList) {
 	mediaFileList.clear();
 	if (NULL == pFileListPath || 0 == strlen(pFileListPath)) {
         LOGD("video file list is null!");
@@ -395,7 +375,7 @@ bool mainActivity::parseVideoFileList(const char *pFileListPath, std::vector<str
 	return true;
 }
 
-int mainActivity::removeCharFromString(string& nString, char c) {
+int bluetoothmeshActivity::removeCharFromString(string& nString, char c) {
     string::size_type   pos;
     while(1) {
         pos = nString.find(c);
@@ -408,14 +388,14 @@ int mainActivity::removeCharFromString(string& nString, char c) {
     return (int)nString.size();
 }
 
-void mainActivity::registerUserTimer(int id, int time) {
+void bluetoothmeshActivity::registerUserTimer(int id, int time) {
 	registerTimer(id, time);
 }
 
-void mainActivity::unregisterUserTimer(int id) {
+void bluetoothmeshActivity::unregisterUserTimer(int id) {
 	unregisterTimer(id);
 }
 
-void mainActivity::resetUserTimer(int id, int time) {
+void bluetoothmeshActivity::resetUserTimer(int id, int time) {
 	resetTimer(id, time);
 }

@@ -26,6 +26,7 @@
 #include "window/ZKSlideWindow.h"
 
 /*TAG:Macro宏ID*/
+#define ID_CAMERA_Textview_tips    50001
 #define ID_CAMERA_sys_back   100
 #define ID_CAMERA_Videoview_camera    95001
 /*TAG:Macro宏ID END*/

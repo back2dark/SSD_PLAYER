@@ -1,8 +1,8 @@
 /***********************************************
 /gen auto by zuitools
 ***********************************************/
-#ifndef __MAINACTIVITY_H__
-#define __MAINACTIVITY_H__
+#ifndef __BLUETOOTHMESHACTIVITY_H__
+#define __BLUETOOTHMESHACTIVITY_H__
 
 
 #include "app/Activity.h"
@@ -26,25 +26,23 @@
 #include "window/ZKSlideWindow.h"
 
 /*TAG:Macro宏ID*/
-#define ID_MAIN_Listview_indicator    80001
-#define ID_MAIN_Digitalclock2    93002
-#define ID_MAIN_Window2    110002
-#define ID_MAIN_Slidewindow1    30001
+#define ID_BLUETOOTHMESH_ButtonLedsw    20005
+#define ID_BLUETOOTHMESH_TextviewLed    50002
+#define ID_BLUETOOTHMESH_sys_back   100
 /*TAG:Macro宏ID END*/
 
-class mainActivity : public Activity, 
+class bluetoothmeshActivity : public Activity, 
                      public ZKSeekBar::ISeekBarChangeListener, 
                      public ZKListView::IItemClickListener,
                      public ZKListView::AbsListAdapter,
                      public ZKSlideWindow::ISlideItemClickListener,
-					 public ZKSlideWindow::ISlidePageChangeListener,
                      public EasyUIContext::ITouchListener,
                      public ZKEditText::ITextChangeListener,
                      public ZKVideoView::IVideoPlayerMessageListener
 {
 public:
-    mainActivity();
-    virtual ~mainActivity();
+    bluetoothmeshActivity();
+    virtual ~bluetoothmeshActivity();
 
     /**
      * 注册定时器
@@ -76,7 +74,7 @@ protected:
     virtual void onItemClick(ZKListView *pListView, int index, int subItemIndex);
 
     virtual void onSlideItemClick(ZKSlideWindow *pSlideWindow, int index);
-    virtual void onSlidePageChange(ZKSlideWindow *pSlideWindow, int page);
+
     virtual bool onTouchEvent(const MotionEvent &ev);
 
     virtual void onTextChanged(ZKTextView *pTextView, const string &text);
@@ -84,7 +82,7 @@ protected:
     void rigesterActivityTimer();
 
     virtual void onVideoPlayerMessage(ZKVideoView *pVideoView, int msg);
-    void videoLoopPlayback(ZKVideoView *pVideoView, int msg, int callbackTabIndex);
+    void videoLoopPlayback(ZKVideoView *pVideoView, int msg, size_t callbackTabIndex);
     void startVideoLoopPlayback();
     void stopVideoLoopPlayback();
     bool parseVideoFileList(const char *pFileListPath, std::vector<string>& mediaFileList);

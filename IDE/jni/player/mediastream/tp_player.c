@@ -1,4 +1,4 @@
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
+#if defined(SUPPORT_CLOUD_PLAY_MODULE) || defined(SUPPORT_PLAYER_MODULE)
 #include "tp_player.h"
 #include "player.h"
 #include "frame.h"

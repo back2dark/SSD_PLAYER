@@ -113,7 +113,12 @@ void V4L2_OpenDev(int width, int height)
 {
 	v4l2_dev_init(&ctx,  (char*)"/dev/video0");
 	v4l2_dev_set_fmt(ctx, V4L2_PIX_FMT_H264, width, height);
-	v4l2_read_header(ctx);
+	if (v4l2_read_header(ctx))
+	{
+		printf("Can't find usb camera\n");
+		mTextview_tipsPtr->setVisible(true);
+		return;
+	}
 
 	// create thread
 	if (!g_displayThread.isRunning())

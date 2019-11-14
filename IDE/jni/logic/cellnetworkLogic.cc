@@ -1,8 +1,5 @@
 #pragma once
 #include "uart/ProtocolSender.h"
-#include <string.h>
-#include <time.h>
-
 /*
 *此文件由GUI工具生成
 *文件功能：用于处理用户的逻辑相应代码
@@ -39,74 +36,17 @@
  * 填充数组用于注册定时器
  * 注意：id不能重复
  */
-
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-#include "tp_player.h"
-
-static char g_file[50] = "http://122.112.182.239/mp4/test.m3u8";
-
-static player_control_t g_pstPlayStatt;
-static std::string g_address;
-#endif
-
 static S_ACTIVITY_TIMEER REGISTER_ACTIVITY_TIMER_TAB[] = {
 	//{0,  6000}, //定时器id=0, 时间间隔6秒
 	//{1,  1000},
 };
-
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-MI_S32 PlayCompletee()
-{
-	tp_player_close();
-	EASYUICONTEXT->goBack();
-    return 0;
-}
-static MI_S32 PlayErrorr(int error_id)
-{
-	char error_text[20];
-	sprintf(error_text,"error :%d",error_id);
-	printf("connenct fail!\n");
-	mWindow_errorPtr->setVisible(true);
-	mTextview_errorPtr->setText(error_text);
-	/*switch(error_id)
-	{
-		case -101:
-			printf("connenct fail!\n");
-			mWindow_errorPtr->setVisible(true);
-			mTextview_errorPtr->setText(error_text);
-
-		break;
-
-
-	}*/
-			return 0;
-}
-static void SetPlayerControlCallBackk(player_control_t *is)
-{
-	is->fpPlayComplete = PlayCompletee;
-	is->fpPlayError = PlayErrorr;
-}
-#endif
 
 /**
  * 当界面构造时触发
  */
 static void onUI_init(){
     //Tips :添加 UI初始化的显示代码到这里,如:mText1Ptr->setText("123");
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-	printf("hrer  %s!!!\n",g_file);
-	system("echo 12 > /sys/class/gpio/export");
-	system("echo out > /sys/class/gpio/gpio12/direction");
-	system("echo 1 > /sys/class/gpio/gpio12/value");
 
-
-	/*mTextview_addressPtr->setText(g_file);
-	//SetPlayerControlCallBackk(&g_pstPlayStatt);
-	g_pstPlayStatt.fpPlayError = PlayErrorr;
-	g_pstPlayStatt.fpPlayComplete = PlayCompletee;
-	//printf("in %p\n",&g_pstPlayStatt.fpPlayError);
-	tp_player_open(g_file, 0, 0, 1024, 600, &g_pstPlayStatt);*/
-#endif
 }
 
 /**
@@ -114,22 +54,7 @@ static void onUI_init(){
  */
 static void onUI_intent(const Intent *intentPtr) {
     if (intentPtr != NULL) {
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-    	//mTextview_addressPtr->setText(g_file);
-    	//tp_player_open("http://122.112.182.239/mp4/test.m3u8", 0, 0, 1024, 600);
-    	g_address = intentPtr->getExtra("address");
-    	printf("test  %s\n",g_address.c_str());
-    	strcpy(g_file,g_address.c_str());
-    	//g_file = g_address.c_str()
-    	mTextview_addressPtr->setText(g_file);
-    		//SetPlayerControlCallBackk(&g_pstPlayStatt);
-    	g_pstPlayStatt.fpPlayError = PlayErrorr;
-    	g_pstPlayStatt.fpPlayComplete = PlayCompletee;
-    		//printf("in %p\n",&g_pstPlayStatt.fpPlayError);
-    	tp_player_open(g_file, 0, 0, 1024, 600, &g_pstPlayStatt);
-
         //TODO
-#endif
     }
 }
 
@@ -189,7 +114,7 @@ static bool onUI_Timer(int id){
  *         false
  *            触摸事件将继续传递到控件上
  */
-static bool onliveActivityTouchEvent(const MotionEvent &ev) {
+static bool oncellnetworkActivityTouchEvent(const MotionEvent &ev) {
     switch (ev.mActionStatus) {
 		case MotionEvent::E_ACTION_DOWN://触摸按下
 			//LOGD("时刻 = %ld 坐标  x = %d, y = %d", ev.mEventTime, ev.mX, ev.mY);
@@ -205,12 +130,5 @@ static bool onliveActivityTouchEvent(const MotionEvent &ev) {
 }
 static bool onButtonClick_sys_back(ZKButton *pButton) {
     //LOGD(" ButtonClick sys_back !!!\n");
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-	tp_player_close();
-#endif
-    return false;
-}
-static bool onButtonClick_Button1(ZKButton *pButton) {
-    //LOGD(" ButtonClick Button1 !!!\n");
     return false;
 }

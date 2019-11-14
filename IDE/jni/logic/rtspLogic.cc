@@ -1,8 +1,5 @@
 #pragma once
 #include "uart/ProtocolSender.h"
-#include <string.h>
-#include <time.h>
-
 /*
 *此文件由GUI工具生成
 *文件功能：用于处理用户的逻辑相应代码
@@ -33,80 +30,87 @@
 * 在Eclipse编辑器中  使用 “alt + /”  快捷键可以打开智能提示
 */
 
+#include <sys/types.h>
+#include <regex.h>
 
 /**
  * 注册定时器
  * 填充数组用于注册定时器
  * 注意：id不能重复
  */
-
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-#include "tp_player.h"
-
-static char g_file[50] = "http://122.112.182.239/mp4/test.m3u8";
-
-static player_control_t g_pstPlayStatt;
-static std::string g_address;
-#endif
-
 static S_ACTIVITY_TIMEER REGISTER_ACTIVITY_TIMER_TAB[] = {
 	//{0,  6000}, //定时器id=0, 时间间隔6秒
 	//{1,  1000},
 };
 
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-MI_S32 PlayCompletee()
-{
-	tp_player_close();
-	EASYUICONTEXT->goBack();
-    return 0;
-}
-static MI_S32 PlayErrorr(int error_id)
-{
-	char error_text[20];
-	sprintf(error_text,"error :%d",error_id);
-	printf("connenct fail!\n");
-	mWindow_errorPtr->setVisible(true);
-	mTextview_errorPtr->setText(error_text);
-	/*switch(error_id)
-	{
-		case -101:
-			printf("connenct fail!\n");
-			mWindow_errorPtr->setVisible(true);
-			mTextview_errorPtr->setText(error_text);
+//static std::string g_strUrl= "^((https|http|ftp|rtsp|mms)?://)"
+//		+ "?(([0-9a-z_!~*'().&=+$%-]+: )?[0-9a-z_!~*'().&=+$%-]+@)?" //ftp的user@
+//		+ "(([0-9]{1,3}\.){3}[0-9]{1,3}" // IP形式的URL- 199.194.52.184
+//		+ "|" // 允许IP和DOMAIN（域名）
+//		+ "([0-9a-z_!~*'()-]+\.)*" // 域名- www.
+//		+ "([0-9a-z][0-9a-z-]{0,61})?[0-9a-z]\." // 二级域名
+//		+ "[a-z]{2,6})" // first level domain- .com or .museum
+//		+ "(:[0-9]{1,4})?" // 端口- :80
+//		+ "((/?)|" // a slash isn't required if there is no file name
+//		+ "(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?)$";
 
-		break;
+//static std::string g_strUrl= "^((https|http|ftp|rtsp|mms)?://)?(([0-9a-z_!~*'().&=+$%-]+: )?[0-9a-z_!~*'().&=+$%-]+@)?(([0-9]{1,3}\.){3}[0-9]{1,3}"	\
+//							 "|([0-9a-z_!~*'()-]+\.)*([0-9a-z][0-9a-z-]{0,61})?[0-9a-z]\.[a-z]{2,6})(:[0-9]{1,4})?((/?)|(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?)$";
 
-
-	}*/
-			return 0;
-}
-static void SetPlayerControlCallBackk(player_control_t *is)
+static char g_strUrl[] = "^(rtsp://)([0-9]{1,3}\.){3}[0-9]{1,3}(:[0-9]{1,4})?(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?$";
+/* return: 0, match; else, not or error */
+int CheckInput(const char *strValue, char *strPattern)
+//int CheckInput(std::string &strValue, std::string &strPattern)
 {
-	is->fpPlayComplete = PlayCompletee;
-	is->fpPlayError = PlayErrorr;
-}
-#endif
+    int rv = -1;
+    regex_t *p_re = NULL;
+    char buf[256] = {0};
+
+    p_re = calloc(1, sizeof(regex_t));
+    if (p_re == NULL)
+    {
+        //printf("error: calloc: %d\n", errno);
+        //rv = -1;
+        goto _end;
+    }
+
+    //rv = regcomp(p_re, _pattern, REG_EXTENDED|REG_NOSUB);
+    rv = regcomp(p_re, strPattern, REG_EXTENDED|REG_NOSUB);
+    if (rv != 0)
+    {
+        (void)regerror(rv, p_re, buf, sizeof(buf));
+        printf("error: regcomp: %s\n",buf);
+        goto _end;
+    }
+
+    //rv = regexec(p_re, _string, (size_t)0, NULL, 0);
+    rv = regexec(p_re, strValue, 0, NULL, 0);
+    regfree(p_re);
+    if (rv != 0)
+    {
+        (void)regerror(rv, p_re, buf, sizeof(buf));
+        //printf("regexec: %s, [%d],[%s]\n", buf, rv, _pattern);
+        printf("regexec: %s, [%d],[%s]\n", buf, rv, strPattern);
+        goto _end;
+    }
+
+    rv = 0;
+
+_end:
+    if (p_re != NULL)
+    {
+        free(p_re);
+    }
+
+    return rv;
+} // match
 
 /**
  * 当界面构造时触发
  */
 static void onUI_init(){
     //Tips :添加 UI初始化的显示代码到这里,如:mText1Ptr->setText("123");
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-	printf("hrer  %s!!!\n",g_file);
-	system("echo 12 > /sys/class/gpio/export");
-	system("echo out > /sys/class/gpio/gpio12/direction");
-	system("echo 1 > /sys/class/gpio/gpio12/value");
 
-
-	/*mTextview_addressPtr->setText(g_file);
-	//SetPlayerControlCallBackk(&g_pstPlayStatt);
-	g_pstPlayStatt.fpPlayError = PlayErrorr;
-	g_pstPlayStatt.fpPlayComplete = PlayCompletee;
-	//printf("in %p\n",&g_pstPlayStatt.fpPlayError);
-	tp_player_open(g_file, 0, 0, 1024, 600, &g_pstPlayStatt);*/
-#endif
 }
 
 /**
@@ -114,22 +118,7 @@ static void onUI_init(){
  */
 static void onUI_intent(const Intent *intentPtr) {
     if (intentPtr != NULL) {
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-    	//mTextview_addressPtr->setText(g_file);
-    	//tp_player_open("http://122.112.182.239/mp4/test.m3u8", 0, 0, 1024, 600);
-    	g_address = intentPtr->getExtra("address");
-    	printf("test  %s\n",g_address.c_str());
-    	strcpy(g_file,g_address.c_str());
-    	//g_file = g_address.c_str()
-    	mTextview_addressPtr->setText(g_file);
-    		//SetPlayerControlCallBackk(&g_pstPlayStatt);
-    	g_pstPlayStatt.fpPlayError = PlayErrorr;
-    	g_pstPlayStatt.fpPlayComplete = PlayCompletee;
-    		//printf("in %p\n",&g_pstPlayStatt.fpPlayError);
-    	tp_player_open(g_file, 0, 0, 1024, 600, &g_pstPlayStatt);
-
         //TODO
-#endif
     }
 }
 
@@ -189,7 +178,7 @@ static bool onUI_Timer(int id){
  *         false
  *            触摸事件将继续传递到控件上
  */
-static bool onliveActivityTouchEvent(const MotionEvent &ev) {
+static bool onrtspActivityTouchEvent(const MotionEvent &ev) {
     switch (ev.mActionStatus) {
 		case MotionEvent::E_ACTION_DOWN://触摸按下
 			//LOGD("时刻 = %ld 坐标  x = %d, y = %d", ev.mEventTime, ev.mX, ev.mY);
@@ -205,12 +194,32 @@ static bool onliveActivityTouchEvent(const MotionEvent &ev) {
 }
 static bool onButtonClick_sys_back(ZKButton *pButton) {
     //LOGD(" ButtonClick sys_back !!!\n");
-#ifdef SUPPORT_CLOUD_PLAY_MODULE
-	tp_player_close();
-#endif
     return false;
 }
-static bool onButtonClick_Button1(ZKButton *pButton) {
-    //LOGD(" ButtonClick Button1 !!!\n");
+
+static void onEditTextChanged_Edittext_url(const std::string &text) {
+    //LOGD(" onEditTextChanged_ Edittext_url %s !!!\n", text.c_str());
+}
+
+static bool onButtonClick_Button_confirm(ZKButton *pButton) {
+    //LOGD(" ButtonClick Button_confirm !!!\n");
+	std::string str = mEdittext_urlPtr->getText();
+	if (!CheckInput(str.c_str(), g_strUrl))
+	{
+		// enter to playing page
+		Intent* intent = new Intent();
+		intent->putExtra("url", str.c_str());
+		EASYUICONTEXT->openActivity("rtspstreamActivity", intent);
+	}
+	else
+	{
+		// can't play stream
+		mWindow_errMsgPtr->setVisible(true);
+	}
+    return false;
+}
+static bool onButtonClick_Button_ok(ZKButton *pButton) {
+    //LOGD(" ButtonClick Button_ok !!!\n");
+	mWindow_errMsgPtr->setVisible(false);
     return false;
 }

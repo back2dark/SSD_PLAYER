@@ -4,6 +4,7 @@
 #include "cameraActivity.h"
 
 /*TAG:GlobalVariable全局变量*/
+static ZKTextView* mTextview_tipsPtr;
 static ZKButton* msys_backPtr;
 static ZKVideoView* mVideoview_cameraPtr;
 static cameraActivity* mActivityPtr;
@@ -125,6 +126,7 @@ const char* cameraActivity::getAppName() const{
 //TAG:onCreate
 void cameraActivity::onCreate() {
 	Activity::onCreate();
+    mTextview_tipsPtr = (ZKTextView*)findControlByID(ID_CAMERA_Textview_tips);
     msys_backPtr = (ZKButton*)findControlByID(ID_CAMERA_sys_back);
     mVideoview_cameraPtr = (ZKVideoView*)findControlByID(ID_CAMERA_Videoview_camera);if(mVideoview_cameraPtr!= NULL){mVideoview_cameraPtr->setVideoPlayerMessageListener(this);}
 	mActivityPtr = this;
