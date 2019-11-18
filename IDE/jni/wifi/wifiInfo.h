@@ -25,6 +25,7 @@ MI_WLAN_ConnectParam_t * getConnectParam();
 void saveConnectParam(MI_WLAN_ConnectParam_t *pConnParam);
 int initWifiConfig();
 int saveWifiConfig();
+int checkProfile();
 
 #endif
 
