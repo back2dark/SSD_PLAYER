@@ -94,6 +94,10 @@ static void onProgressChanged_SeekBar1(ZKSeekBar *pSeekBar, int progress) {
 	printf("seekbar1 pos xx:%d\n", progress);
 }
 
+static void onProgressChanged_CircleBar1(ZKCircleBar *pCircleBar, int progress) {
+	printf("circlebar1 pos xx:%d\n", progress);
+}
+
 static bool onButtonClick_Button1(ZKButton *pButton) {
     EASYUICONTEXT->openActivity("helpSliderActivity");
     return false;

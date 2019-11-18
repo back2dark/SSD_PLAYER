@@ -27,8 +27,8 @@ PROJ_DIR_TREE := $(dir $(foreach src_path, $(LOCAL_SRC_FILES), $(call rwildcard,
 PROJ_DIR_TREE := $(sort $(PROJ_DIR_TREE))  
 
 #wlan功能启用开关
-#CONFIG_WLAN_SWITCH := "enable"
-CONFIG_WLAN_SWITCH :=
+CONFIG_WLAN_SWITCH := "enable"
+#CONFIG_WLAN_SWITCH :=
 
 #player功能启用开关
 CONFIG_PLAYER_SWITCH := "enable"

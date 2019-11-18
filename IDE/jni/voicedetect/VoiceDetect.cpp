@@ -146,10 +146,6 @@ typedef struct
 #endif
 #define AO_DEV_ID (AUDIO_AO_DEV_ID_LINE_OUT)
 
-#define CSPOTTER_PATH_PREFIX        "/customer/res/CSpotter"
-#define CSPOTTER_LIB_PATH           "/customer/res/CSpotter/lib"
-#define CSPOTTER_DATA_PATH          "/customer/res/CSpotter/data"
-
 #define MAX_FRAME_QUEUE_DEPTH       64
 
 static list_t g_wordListHead;

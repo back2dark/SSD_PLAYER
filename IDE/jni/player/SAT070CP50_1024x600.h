@@ -1,3 +1,6 @@
+#ifndef __SAT070CP50_1024x600_H__
+#define __SAT070CP50_1024x600_H__
+
 #include "mi_panel_datatype.h"
 
 MI_PANEL_ParamConfig_t stPanelParam =
@@ -128,3 +131,4 @@ MI_PANEL_MipiDsiConfig_t stMipiDsiConfig =
 
 };
 
+#endif

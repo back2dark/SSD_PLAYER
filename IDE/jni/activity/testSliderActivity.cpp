@@ -72,6 +72,15 @@ static S_ZKSeekBarCallback SZKSeekBarCallbackTab[] = {
     ID_TESTSLIDER_SeekBar2, onProgressChanged_SeekBar2,
 };
 
+typedef void (*CircleBarCallback)(ZKCircleBar *pCircleBar, int progress);
+typedef struct {
+    int id;
+    CircleBarCallback callback;
+}S_ZKCircleBarCallback;
+/*TAG:CircleBarCallbackTab*/
+static S_ZKCircleBarCallback SZKCircleBarCallbackTab[] = {
+	ID_TESTSLIDER_Circlebar1, onProgressChanged_CircleBar1,
+};
 
 typedef int (*ListViewGetItemCountCallback)(const ZKListView *pListView);
 typedef void (*ListViewobtainListItemDataCallback)(ZKListView *pListView,ZKListView::ZKListItem *pListItem, int index);
@@ -150,7 +159,7 @@ void testSliderActivity::onCreate() {
     mTextview2Ptr = (ZKTextView*)findControlByID(ID_TESTSLIDER_Textview2);
     mSeekBar1Ptr = (ZKSeekBar*)findControlByID(ID_TESTSLIDER_SeekBar1);if(mSeekBar1Ptr!= NULL){mSeekBar1Ptr->setSeekBarChangeListener(this);}
     mTextview1Ptr = (ZKTextView*)findControlByID(ID_TESTSLIDER_Textview1);
-    mCirclebar1Ptr = (ZKCircleBar*)findControlByID(ID_TESTSLIDER_Circlebar1);
+    mCirclebar1Ptr = (ZKCircleBar*)findControlByID(ID_TESTSLIDER_Circlebar1);if(mCirclebar1Ptr!=NULL){mCirclebar1Ptr->setCircleBarChangeListener(this);}
     mTextValuePtr = (ZKTextView*)findControlByID(ID_TESTSLIDER_TextValue);
     mSeekBar2Ptr = (ZKSeekBar*)findControlByID(ID_TESTSLIDER_SeekBar2);if(mSeekBar2Ptr!= NULL){mSeekBar2Ptr->setSeekBarChangeListener(this);}
 	mActivityPtr = this;
@@ -212,6 +221,17 @@ void testSliderActivity::onProgressChanged(ZKSeekBar *pSeekBar, int progress){
     for (int i = 0; i < seekBarTablen; ++i) {
         if (SZKSeekBarCallbackTab[i].id == pSeekBar->getID()) {
             SZKSeekBarCallbackTab[i].callback(pSeekBar, progress);
+            break;
+        }
+    }
+}
+
+void testSliderActivity::onProgressChanged(ZKCircleBar *pCircleBar, int progress){
+
+    int circleBarTablen = sizeof(SZKCircleBarCallbackTab) / sizeof(S_ZKCircleBarCallback);
+    for (int i = 0; i < circleBarTablen; ++i) {
+        if (SZKCircleBarCallbackTab[i].id == pCircleBar->getID()) {
+            SZKCircleBarCallbackTab[i].callback(pCircleBar, progress);
             break;
         }
     }

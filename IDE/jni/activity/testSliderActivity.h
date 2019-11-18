@@ -44,6 +44,7 @@
 
 class testSliderActivity : public Activity, 
                      public ZKSeekBar::ISeekBarChangeListener, 
+					 public ZKCircleBar::ICircleBarChangeListener,
                      public ZKListView::IItemClickListener,
                      public ZKListView::AbsListAdapter,
                      public ZKSlideWindow::ISlideItemClickListener,
@@ -79,6 +80,7 @@ protected:
     virtual bool onTimer(int id);
 
     virtual void onProgressChanged(ZKSeekBar *pSeekBar, int progress);
+    virtual void onProgressChanged(ZKCircleBar *pCircleBar, int progress);
 
     virtual int getListItemCount(const ZKListView *pListView) const;
     virtual void obtainListItemData(ZKListView *pListView, ZKListView::ZKListItem *pListItem, int index);

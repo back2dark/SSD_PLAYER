@@ -53,11 +53,16 @@ protected:
 		if (!isBootupConnect)
 		{
 			MI_WLAN_ConnectParam_t *pConnParam = getConnectParam();
-			MI_WLAN_Init(&stParm);
-			MI_WLAN_Open(&stOpenParam);
+
+			if (MI_WLAN_Init(&stParm) || MI_WLAN_Open(&stOpenParam))
+			{
+				setWifiSupportStatus(false);
+				return false;
+			}
 
 			if (isWifiEnable && wlanHdl != -1)
 			{
+				checkProfile();
 				printf("conn param: id=%d, ssid=%s, passwd=%s\n", wlanHdl, (char*)pConnParam->au8SSId, (char*)pConnParam->au8Password);
 				MI_WLAN_Connect(&wlanHdl, pConnParam); // save after connect
 				printf("save conn param: id=%d, ssid=%s, passwd=%s\n", wlanHdl);
